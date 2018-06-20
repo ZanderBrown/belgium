@@ -137,9 +137,19 @@ impl Iterator for Input {
                 Some(Ok(Token::Comma))
             } else if ch == '#' {
                 self.forward();
+                let neg = if self.peek() == Some('-') {
+                    self.forward();
+                    true
+                } else {
+                    false
+                };
                 let num = self.read(&|c| c.is_numeric());
-                match num.parse() {
-                    Ok(num) => Some(Ok(Token::Number(num))),
+                match num.parse::<usize>() {
+                    Ok(num) => Some(Ok(Token::Number(if neg {
+                        (!num) + 1
+                    } else {
+                        num
+                    }))),
                     Err(_) => Some(Err(self.error(format!("Bad number {}", num)))),
                 }
             } else {
