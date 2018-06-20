@@ -12,11 +12,11 @@ pub type Label = String;
 
 pub enum Operand {
     Register(Register),
-    Literal(isize),
+    Literal(usize),
 }
 
 impl Operand {
-    pub fn value(&self, regs: &Registers) -> Result<isize, Runtime> {
+    pub fn value(&self, regs: &Registers) -> Result<usize, Runtime> {
         match self {
             Operand::Register(r) => {
                 if *r >= regs.len() {

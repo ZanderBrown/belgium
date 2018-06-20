@@ -83,7 +83,7 @@ const COMMANDS: [&str; 18] = [
 
 pub enum Token {
     Command(String),
-    Number(isize),
+    Number(usize),
     Memory(usize),
     Register(usize),
     Label(String),

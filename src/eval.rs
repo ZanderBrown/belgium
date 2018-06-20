@@ -4,13 +4,13 @@ use parse::Node;
 use std::collections::HashMap;
 use std::fmt;
 
-pub type MainMemory = Vec<isize>;
-pub type Registers = Vec<isize>;
+pub type MainMemory = Vec<usize>;
+pub type Registers = Vec<usize>;
 pub type Labels = HashMap<String, usize>;
 
 pub trait Storage {
-    fn get(&self, i: usize, n: &str) -> Result<isize, Runtime>;
-    fn set(&mut self, i: usize, v: isize, n: &str) -> Result<(), Runtime>;
+    fn get(&self, i: usize, n: &str) -> Result<usize, Runtime>;
+    fn set(&mut self, i: usize, v: usize, n: &str) -> Result<(), Runtime>;
     fn create(count: usize) -> Self;
 }
 
@@ -41,8 +41,8 @@ pub trait Eval {
     ) -> Result<(), Runtime>;
 }
 
-impl Storage for Vec<isize> {
-    fn get(&self, i: usize, n: &str) -> Result<isize, Runtime> {
+impl Storage for Vec<usize> {
+    fn get(&self, i: usize, n: &str) -> Result<usize, Runtime> {
         if i >= self.len() {
             Err(Runtime::new(format!("Invalid {} {}", i, n)))
         } else {
@@ -50,7 +50,7 @@ impl Storage for Vec<isize> {
         }
     }
 
-    fn set(&mut self, i: usize, v: isize, n: &str) -> Result<(), Runtime> {
+    fn set(&mut self, i: usize, v: usize, n: &str) -> Result<(), Runtime> {
         if i >= self.len() {
             Err(Runtime::new(format!("Invalid {} {}", n, i)))
         } else {
