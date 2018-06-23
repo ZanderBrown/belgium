@@ -7,4 +7,7 @@ MOV R2, #100
 ADD R1, R1, #1
 CMP R1, R2
 BLT test
+MOV R11, #-1
+MVN R10, R11
+SUB R9, R10, #1
 HALT

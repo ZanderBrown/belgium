@@ -63,6 +63,7 @@ pub trait Parser {
     fn label(&mut self) -> Result<Label, Syntax>;
     fn operand(&mut self) -> Result<Operand, Syntax>;
     fn comma(&mut self) -> Result<(), Syntax>;
+    fn colon(&mut self) -> Result<(), Syntax>;
 }
 
 impl Parser for Input {
@@ -119,6 +120,17 @@ impl Parser for Input {
             }
         } else {
             Err(self.error("Expected comma".into()))
+        }
+    }
+
+    fn colon(&mut self) -> Result<(), Syntax> {
+        if let Some(tok) = self.next() {
+            match tok? {
+                Token::Colon => Ok(()),
+                tok => Err(self.error(format!("Expected colon got {}", tok))),
+            }
+        } else {
+            Err(self.error("Expected colon".into()))
         }
     }
 
@@ -234,6 +246,7 @@ impl Parser for Input {
                     _ => return Err(self.error(format!("Unexpected {}", cmd))),
                 },
                 Token::Label(lbl) => {
+                    self.colon()?;
                     labels.insert(lbl, prog.len());
                 }
                 tok => return Err(self.error(format!("Unexpected {}", tok))),

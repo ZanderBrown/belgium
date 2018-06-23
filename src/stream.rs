@@ -88,6 +88,7 @@ pub enum Token {
     Register(usize),
     Label(String),
     Comma,
+    Colon,
 }
 
 impl fmt::Display for Token {
@@ -99,6 +100,7 @@ impl fmt::Display for Token {
             Token::Register(reg) => write!(f, "R{}", reg),
             Token::Label(lbl) => write!(f, "{}", lbl),
             Token::Comma => write!(f, ","),
+            Token::Colon => write!(f, ":"),
         }
     }
 }
@@ -121,9 +123,6 @@ impl Iterator for Input {
                 if COMMANDS.contains(&text.as_str()) {
                     Some(Ok(Token::Command(text)))
                 } else {
-                    if self.peek() == Some(':') {
-                        self.next();
-                    }
                     Some(Ok(Token::Label(text)))
                 }
             } else if ch.is_numeric() {
@@ -135,6 +134,9 @@ impl Iterator for Input {
             } else if ch == ',' {
                 self.forward();
                 Some(Ok(Token::Comma))
+            } else if ch == ':' {
+                self.forward();
+                Some(Ok(Token::Colon))
             } else if ch == '#' {
                 self.forward();
                 let neg = if self.peek() == Some('-') {
