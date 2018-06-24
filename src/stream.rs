@@ -148,7 +148,7 @@ impl Iterator for Input {
                 let num = self.read(&|c| c.is_numeric());
                 match num.parse::<usize>() {
                     Ok(num) => Some(Ok(Token::Number(if neg {
-                        (!num) + 1
+                        (!num).wrapping_add(1)
                     } else {
                         num
                     }))),

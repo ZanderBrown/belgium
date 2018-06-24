@@ -103,12 +103,12 @@ impl Eval for Vec<Node> {
                     last = Comparison::None;
                 }
                 Node::Add(dest, source, other) => {
-                    let val = regs.get(*source, regstr)? + other.value(regs)?;
+                    let val = regs.get(*source, regstr)?.wrapping_add(other.value(regs)?);
                     regs.set(*dest, val, regstr)?;
                     last = Comparison::None;
                 }
                 Node::Sub(dest, source, other) => {
-                    let val = regs.get(*source, regstr)? - other.value(regs)?;
+                    let val = regs.get(*source, regstr)?.wrapping_sub(other.value(regs)?);
                     regs.set(*dest, val, regstr)?;
                     last = Comparison::None;
                 }
