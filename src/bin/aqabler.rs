@@ -1,5 +1,3 @@
-extern crate aqabler;
-
 use aqabler::Eval;
 use aqabler::Input;
 use aqabler::MainMemory;

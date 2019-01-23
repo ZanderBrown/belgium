@@ -3,7 +3,7 @@ use std::fmt;
 pub struct Syntax(String, usize, usize);
 
 impl fmt::Display for Syntax {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Syntax Error: {} [{}:{}]", self.0, self.1, self.2)
     }
 }
@@ -45,7 +45,7 @@ impl Input {
         Syntax(msg, self.line, self.col)
     }
 
-    fn read(&mut self, matcher: &Fn(char) -> bool) -> String {
+    fn read(&mut self, matcher: &dyn Fn(char) -> bool) -> String {
         // The string we will return
         let mut s = String::new();
         // Read whilst charecters are still available
@@ -92,7 +92,7 @@ pub enum Token {
 }
 
 impl fmt::Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Token::Command(cmd) => write!(f, "{}", cmd),
             Token::Number(num) => write!(f, "#{}", num),

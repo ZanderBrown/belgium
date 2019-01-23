@@ -1,5 +1,5 @@
-use parse::Comparison;
-use parse::Node;
+use crate::parse::Comparison;
+use crate::parse::Node;
 
 use std::collections::HashMap;
 use std::fmt;
@@ -27,7 +27,7 @@ impl Runtime {
 }
 
 impl fmt::Display for Runtime {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Runtime Error: {}", self.0)
     }
 }

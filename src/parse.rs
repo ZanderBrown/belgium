@@ -1,8 +1,8 @@
-use eval::Registers;
-use eval::Runtime;
-use stream::Input;
-use stream::Syntax;
-use stream::Token;
+use crate::eval::Registers;
+use crate::eval::Runtime;
+use crate::stream::Input;
+use crate::stream::Syntax;
+use crate::stream::Token;
 
 use std::collections::HashMap;
 

@@ -3,9 +3,9 @@ mod parse;
 mod stream;
 
 // Make enough public to easily run programs
-pub use eval::Eval;
-pub use eval::MainMemory;
-pub use eval::Registers;
-pub use eval::Storage;
-pub use parse::Parser;
-pub use stream::Input;
+pub use crate::eval::Eval;
+pub use crate::eval::MainMemory;
+pub use crate::eval::Registers;
+pub use crate::eval::Storage;
+pub use crate::parse::Parser;
+pub use crate::stream::Input;
