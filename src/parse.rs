@@ -1,5 +1,5 @@
-use crate::eval::Registers;
 use crate::eval::Runtime;
+use crate::eval::Storage;
 use crate::stream::Input;
 use crate::stream::Syntax;
 use crate::stream::Token;
@@ -12,19 +12,13 @@ pub type Label = String;
 
 pub enum Operand {
     Register(Register),
-    Literal(usize),
+    Literal(u32),
 }
 
 impl Operand {
-    pub fn value(&self, regs: &Registers) -> Result<usize, Runtime> {
+    pub fn value(&self, regs: &impl Storage) -> Result<u32, Runtime> {
         match self {
-            Operand::Register(r) => {
-                if *r >= regs.len() {
-                    Err(Runtime::new(format!("Invalid Register {}", r)))
-                } else {
-                    Ok(regs[*r])
-                }
-            }
+            Operand::Register(r) => regs.get(*r, "Register"),
             Operand::Literal(l) => Ok(*l),
         }
     }

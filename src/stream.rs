@@ -83,7 +83,7 @@ const COMMANDS: [&str; 18] = [
 
 pub enum Token {
     Command(String),
-    Number(usize),
+    Number(u32),
     Memory(usize),
     Register(usize),
     Label(String),
@@ -146,7 +146,7 @@ impl Iterator for Input {
                     false
                 };
                 let num = self.read(&|c| c.is_numeric());
-                match num.parse::<usize>() {
+                match num.parse::<u32>() {
                     Ok(num) => Some(Ok(Token::Number(if neg {
                         (!num).wrapping_add(1)
                     } else {

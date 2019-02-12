@@ -4,14 +4,39 @@ use crate::parse::Node;
 use std::collections::HashMap;
 use std::fmt;
 
-pub type MainMemory = Vec<usize>;
-pub type Registers = Vec<usize>;
 pub type Labels = HashMap<String, usize>;
 
 pub trait Storage {
-    fn get(&self, i: usize, n: &str) -> Result<usize, Runtime>;
-    fn set(&mut self, i: usize, v: usize, n: &str) -> Result<(), Runtime>;
-    fn create(count: usize) -> Self;
+    fn get(&self, i: usize, n: &str) -> Result<u32, Runtime>;
+    fn set(&mut self, i: usize, v: u32, n: &str) -> Result<(), Runtime>;
+    fn count(&self) -> usize;
+}
+
+impl Storage {
+    pub fn iter<'a>(&'a self) -> StorageIterator<'a> {
+        StorageIterator {
+            mem: Box::new(self),
+            pos: 0,
+        }
+    }
+}
+
+pub struct StorageIterator<'a> {
+    mem: Box<&'a Storage>,
+    pos: usize,
+}
+
+impl<'a> Iterator for StorageIterator<'a> {
+    type Item = (usize, u32);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(itm) = (*self.mem).get(self.pos, "").ok() {
+            self.pos += 1;
+            Some((self.pos - 1, itm))
+        } else {
+            None
+        }
+    }
 }
 
 trait Jump {
@@ -36,36 +61,9 @@ pub trait Eval {
     fn eval(
         &self,
         lbls: &HashMap<String, usize>,
-        regs: &mut Registers,
-        mem: &mut MainMemory,
+        regs: &mut impl Storage,
+        mem: &mut impl Storage,
     ) -> Result<(), Runtime>;
-}
-
-impl Storage for Vec<usize> {
-    fn get(&self, i: usize, n: &str) -> Result<usize, Runtime> {
-        if i >= self.len() {
-            Err(Runtime::new(format!("Invalid {} {}", i, n)))
-        } else {
-            Ok(self[i])
-        }
-    }
-
-    fn set(&mut self, i: usize, v: usize, n: &str) -> Result<(), Runtime> {
-        if i >= self.len() {
-            Err(Runtime::new(format!("Invalid {} {}", n, i)))
-        } else {
-            self[i] = v;
-            Ok(())
-        }
-    }
-
-    fn create(count: usize) -> Self {
-        let mut regs = Vec::with_capacity(count);
-        for _ in 0..count {
-            regs.push(0);
-        }
-        regs
-    }
 }
 
 impl Jump for Labels {
@@ -82,8 +80,8 @@ impl Eval for Vec<Node> {
     fn eval(
         &self,
         lbls: &Labels,
-        regs: &mut Registers,
-        mem: &mut MainMemory,
+        regs: &mut impl Storage,
+        mem: &mut impl Storage,
     ) -> Result<(), Runtime> {
         let regstr = "Register";
         let memstr = "Memory Address";
