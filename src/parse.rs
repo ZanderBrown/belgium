@@ -60,6 +60,24 @@ pub trait Parser {
     fn colon(&mut self) -> Result<(), Syntax>;
 }
 
+fn encode(n: u32) -> Option<u32> {
+    for i in 0..16 {
+        let m = n.rotate_left(i * 2);
+        if m < 256 {
+            return Some((i << 8) | m);
+        }
+    }
+    None
+}
+
+fn to_immediate(val: u32) -> Option<u32> {
+    if let Some(_encoded) = encode(val) {
+        Some(val)
+    } else {
+        None
+    }
+}
+
 impl Parser for Input {
     fn register(&mut self) -> Result<Register, Syntax> {
         if let Some(tok) = self.next() {
@@ -87,7 +105,13 @@ impl Parser for Input {
         if let Some(tok) = self.next() {
             match tok? {
                 Token::Register(r) => Ok(Operand::Register(r)),
-                Token::Number(r) => Ok(Operand::Literal(r)),
+                Token::Number(r) => {
+                    if let Some(r) = to_immediate(r) {
+                        Ok(Operand::Literal(r))
+                    } else {
+                        Err(self.error(format!("Can't encode {}", r)))
+                    }
+                }
                 tok => Err(self.error(format!("Expected operand got {}", tok))),
             }
         } else {

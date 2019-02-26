@@ -119,7 +119,7 @@ impl Iterator for Input {
                     Err(_) => Some(Err(self.error(format!("Bad number {}", num)))),
                 }
             } else if ch.is_alphabetic() {
-                let text = self.read(&|c| c.is_alphabetic());
+                let text = self.read(&|c| c.is_alphanumeric());
                 if COMMANDS.contains(&text.as_str()) {
                     Some(Ok(Token::Command(text)))
                 } else {
@@ -139,19 +139,9 @@ impl Iterator for Input {
                 Some(Ok(Token::Colon))
             } else if ch == '#' {
                 self.forward();
-                let neg = if self.peek() == Some('-') {
-                    self.forward();
-                    true
-                } else {
-                    false
-                };
                 let num = self.read(&|c| c.is_numeric());
                 match num.parse::<u32>() {
-                    Ok(num) => Some(Ok(Token::Number(if neg {
-                        (!num).wrapping_add(1)
-                    } else {
-                        num
-                    }))),
+                    Ok(num) => Some(Ok(Token::Number(num))),
                     Err(_) => Some(Err(self.error(format!("Bad number {}", num)))),
                 }
             } else {
