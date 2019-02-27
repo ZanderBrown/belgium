@@ -1,13 +1,12 @@
-use crate::eval::Runtime;
 use crate::eval::Storage;
 use crate::stream::Input;
-use crate::stream::Syntax;
+use crate::stream::Error;
 use crate::stream::Token;
 
 use std::collections::HashMap;
 
-pub type Register = usize;
-pub type Memory = usize;
+pub type Register = u32;
+pub type Memory = u32;
 pub type Label = String;
 
 pub enum Operand {
@@ -16,7 +15,7 @@ pub enum Operand {
 }
 
 impl Operand {
-    pub fn value(&self, regs: &impl Storage) -> Result<u32, Runtime> {
+    pub fn value(&self, regs: &impl Storage) -> Result<u32, Error> {
         match self {
             Operand::Register(r) => regs.get(*r, "Register"),
             Operand::Literal(l) => Ok(*l),
@@ -51,13 +50,13 @@ pub enum Node {
 }
 
 pub trait Parser {
-    fn parse(&mut self) -> Result<(Vec<Node>, HashMap<String, usize>), Syntax>;
-    fn register(&mut self) -> Result<Register, Syntax>;
-    fn memory(&mut self) -> Result<Memory, Syntax>;
-    fn label(&mut self) -> Result<Label, Syntax>;
-    fn operand(&mut self) -> Result<Operand, Syntax>;
-    fn comma(&mut self) -> Result<(), Syntax>;
-    fn colon(&mut self) -> Result<(), Syntax>;
+    fn parse(&mut self) -> Result<(Vec<Node>, HashMap<String, usize>), Error>;
+    fn register(&mut self) -> Result<Register, Error>;
+    fn memory(&mut self) -> Result<Memory, Error>;
+    fn label(&mut self) -> Result<Label, Error>;
+    fn operand(&mut self) -> Result<Operand, Error>;
+    fn comma(&mut self) -> Result<(), Error>;
+    fn colon(&mut self) -> Result<(), Error>;
 }
 
 fn encode(n: u32) -> Option<u32> {
@@ -79,7 +78,7 @@ fn to_immediate(val: u32) -> Option<u32> {
 }
 
 impl Parser for Input {
-    fn register(&mut self) -> Result<Register, Syntax> {
+    fn register(&mut self) -> Result<Register, Error> {
         if let Some(tok) = self.next() {
             match tok? {
                 Token::Register(r) => Ok(r),
@@ -90,7 +89,7 @@ impl Parser for Input {
         }
     }
 
-    fn memory(&mut self) -> Result<Memory, Syntax> {
+    fn memory(&mut self) -> Result<Memory, Error> {
         if let Some(tok) = self.next() {
             match tok? {
                 Token::Memory(r) => Ok(r),
@@ -101,7 +100,7 @@ impl Parser for Input {
         }
     }
 
-    fn operand(&mut self) -> Result<Operand, Syntax> {
+    fn operand(&mut self) -> Result<Operand, Error> {
         if let Some(tok) = self.next() {
             match tok? {
                 Token::Register(r) => Ok(Operand::Register(r)),
@@ -119,7 +118,7 @@ impl Parser for Input {
         }
     }
 
-    fn label(&mut self) -> Result<Label, Syntax> {
+    fn label(&mut self) -> Result<Label, Error> {
         if let Some(tok) = self.next() {
             match tok? {
                 Token::Label(r) => Ok(r),
@@ -130,7 +129,7 @@ impl Parser for Input {
         }
     }
 
-    fn comma(&mut self) -> Result<(), Syntax> {
+    fn comma(&mut self) -> Result<(), Error> {
         if let Some(tok) = self.next() {
             match tok? {
                 Token::Comma => Ok(()),
@@ -141,7 +140,7 @@ impl Parser for Input {
         }
     }
 
-    fn colon(&mut self) -> Result<(), Syntax> {
+    fn colon(&mut self) -> Result<(), Error> {
         if let Some(tok) = self.next() {
             match tok? {
                 Token::Colon => Ok(()),
@@ -152,7 +151,7 @@ impl Parser for Input {
         }
     }
 
-    fn parse(&mut self) -> Result<(Vec<Node>, HashMap<String, usize>), Syntax> {
+    fn parse(&mut self) -> Result<(Vec<Node>, HashMap<String, usize>), Error> {
         let mut prog = Vec::with_capacity(20);
         let mut labels = HashMap::new();
         while let Some(token) = self.next() {

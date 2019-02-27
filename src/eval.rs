@@ -1,14 +1,14 @@
+use crate::stream::Error;
 use crate::parse::Comparison;
 use crate::parse::Node;
 
 use std::collections::HashMap;
-use std::fmt;
 
 pub type Labels = HashMap<String, usize>;
 
 pub trait Storage {
-    fn get(&self, i: usize, n: &str) -> Result<u32, Runtime>;
-    fn set(&mut self, i: usize, v: u32, n: &str) -> Result<(), Runtime>;
+    fn get(&self, i: u32, n: &str) -> Result<u32, Error>;
+    fn set(&mut self, i: u32, v: u32, n: &str) -> Result<(), Error>;
     fn count(&self) -> usize;
 }
 
@@ -23,11 +23,11 @@ impl Storage {
 
 pub struct StorageIterator<'a> {
     mem: Box<&'a Storage>,
-    pos: usize,
+    pos: u32,
 }
 
 impl<'a> Iterator for StorageIterator<'a> {
-    type Item = (usize, u32);
+    type Item = (u32, u32);
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(itm) = (*self.mem).get(self.pos, "").ok() {
@@ -40,21 +40,7 @@ impl<'a> Iterator for StorageIterator<'a> {
 }
 
 trait Jump {
-    fn jump(&self, label: &String) -> Result<usize, Runtime>;
-}
-
-pub struct Runtime(String);
-
-impl Runtime {
-    pub fn new(m: String) -> Self {
-        Runtime(m)
-    }
-}
-
-impl fmt::Display for Runtime {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Runtime Error: {}", self.0)
-    }
+    fn jump(&self, label: &String) -> Result<usize, Error>;
 }
 
 pub trait Eval {
@@ -63,15 +49,15 @@ pub trait Eval {
         lbls: &HashMap<String, usize>,
         regs: &mut impl Storage,
         mem: &mut impl Storage,
-    ) -> Result<(), Runtime>;
+    ) -> Result<(), Error>;
 }
 
 impl Jump for Labels {
-    fn jump(&self, label: &String) -> Result<usize, Runtime> {
+    fn jump(&self, label: &String) -> Result<usize, Error> {
         if let Some(pos) = self.get(label) {
             Ok(pos - 1)
         } else {
-            Err(Runtime::new(format!("Bad Label {}", label)))
+            Err(Error::new(format!("Bad Label {}", label), None))
         }
     }
 }
@@ -82,14 +68,14 @@ impl Eval for Vec<Node> {
         lbls: &Labels,
         regs: &mut impl Storage,
         mem: &mut impl Storage,
-    ) -> Result<(), Runtime> {
+    ) -> Result<(), Error> {
         let regstr = "Register";
         let memstr = "Memory Address";
         let mut last = Comparison::None;
         let mut idx = 0;
         loop {
             if idx >= self.len() {
-                break Err(Runtime::new("Out of instructions".into()));
+                break Err(Error::new("Out of instructions".into(), None));
             }
             match &self[idx] {
                 Node::Ldr(reg, memref) => {

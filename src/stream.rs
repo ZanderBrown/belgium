@@ -1,10 +1,35 @@
 use std::fmt;
+use std::error;
 
-pub struct Syntax(String, usize, usize);
+/// Line, Column
+#[derive(Debug)]
+pub struct Point(usize, usize);
 
-impl fmt::Display for Syntax {
+#[derive(Debug)]
+pub struct Error {
+    message: String,
+    point: Option<Point>,
+}
+
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Syntax Error: {} [{}:{}]", self.0, self.1, self.2)
+        write!(f, "Error: {}", self.message)?;
+        if let Some(point) = &self.point {
+            write!(f, " [{}:{}]", point.0, point.1)?;
+        }
+        Ok(())
+    }
+}
+
+impl error::Error for Error {
+    fn cause(&self) -> Option<&error::Error> {
+        None
+    }
+}
+
+impl Error {
+    pub fn new(message: String, point: Option<Point>) -> Self {
+        Self {message, point}
     }
 }
 
@@ -41,8 +66,8 @@ impl Input {
     }
 
     /// Generate a syntax error with msg at the current position
-    pub fn error(&self, msg: String) -> Syntax {
-        Syntax(msg, self.line, self.col)
+    pub fn error(&self, msg: String) -> Error {
+        Error::new(msg, Some(Point(self.line, self.col)))
     }
 
     fn read(&mut self, matcher: &dyn Fn(char) -> bool) -> String {
@@ -84,8 +109,8 @@ const COMMANDS: [&str; 18] = [
 pub enum Token {
     Command(String),
     Number(u32),
-    Memory(usize),
-    Register(usize),
+    Memory(u32),
+    Register(u32),
     Label(String),
     Comma,
     Colon,
@@ -106,9 +131,9 @@ impl fmt::Display for Token {
 }
 
 impl Iterator for Input {
-    type Item = Result<Token, Syntax>;
+    type Item = Result<Token, Error>;
 
-    fn next(&mut self) -> Option<Result<Token, Syntax>> {
+    fn next(&mut self) -> Option<Result<Token, Error>> {
         self.read(&|ch| ch.is_whitespace());
         if let Some(ch) = self.peek() {
             if ch == 'R' {

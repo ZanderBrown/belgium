@@ -1,4 +1,4 @@
-use crate::eval::Runtime;
+use crate::stream::Error;
 use crate::eval::Storage;
 use std::rc::Weak;
 
@@ -43,20 +43,20 @@ pub struct Memory {
 }
 
 impl Storage for Memory {
-    fn get(&self, i: usize, n: &str) -> Result<u32, Runtime> {
-        if i >= self.backing.len() {
-            Err(Runtime::new(format!("Invalid {} {}", i, n)))
+    fn get(&self, i: u32, n: &str) -> Result<u32, Error> {
+        if (i as usize) >= self.backing.len() {
+            Err(Error::new(format!("Invalid {} {}", i, n), None))
         } else {
-            Ok(self.backing[i])
+            Ok(self.backing[i as usize])
         }
     }
 
-    fn set(&mut self, i: usize, v: u32, n: &str) -> Result<(), Runtime> {
-        if i >= self.backing.len() {
-            Err(Runtime::new(format!("Invalid {} {}", n, i)))
+    fn set(&mut self, i: u32, v: u32, n: &str) -> Result<(), Error> {
+        if (i as usize) >= self.backing.len() {
+            Err(Error::new(format!("Invalid {} {}", n, i), None))
         } else {
-            self.backing[i] = v;
-            self.emit(ChangeEvent { idx: i, val: v });
+            self.backing[i as usize] = v;
+            self.emit(ChangeEvent { idx: i as usize, val: v });
             Ok(())
         }
     }
