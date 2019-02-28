@@ -1,10 +1,10 @@
-use crate::stream::Error;
 use crate::eval::Storage;
+use crate::stream::Error;
 use std::rc::Weak;
 
 #[derive(Clone)]
 pub struct ChangeEvent {
-    pub idx: usize,
+    pub idx: u32,
     pub val: u32,
 }
 
@@ -25,12 +25,13 @@ impl Memory {
         }
     }
 
-    pub fn create(count: usize) -> Self {
+    pub fn create(name: String, count: usize) -> Self {
         let mut backing = Vec::with_capacity(count);
         for _ in 0..count {
             backing.push(0);
         }
         Self {
+            name,
             backing,
             listeners: vec![],
         }
@@ -38,25 +39,26 @@ impl Memory {
 }
 
 pub struct Memory {
+    name: String,
     backing: Vec<u32>,
     listeners: Vec<Weak<Observer<ChangeEvent>>>,
 }
 
 impl Storage for Memory {
-    fn get(&self, i: u32, n: &str) -> Result<u32, Error> {
+    fn get(&self, i: u32) -> Result<u32, Error> {
         if (i as usize) >= self.backing.len() {
-            Err(Error::new(format!("Invalid {} {}", i, n), None))
+            Err(Error::new(format!("Invalid {} {}", i, self.name), None))
         } else {
             Ok(self.backing[i as usize])
         }
     }
 
-    fn set(&mut self, i: u32, v: u32, n: &str) -> Result<(), Error> {
+    fn set(&mut self, i: u32, v: u32) -> Result<(), Error> {
         if (i as usize) >= self.backing.len() {
-            Err(Error::new(format!("Invalid {} {}", n, i), None))
+            Err(Error::new(format!("Invalid {} {}", self.name, i), None))
         } else {
             self.backing[i as usize] = v;
-            self.emit(ChangeEvent { idx: i as usize, val: v });
+            self.emit(ChangeEvent { idx: i, val: v });
             Ok(())
         }
     }

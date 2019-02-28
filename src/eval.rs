@@ -1,14 +1,14 @@
-use crate::stream::Error;
 use crate::parse::Comparison;
 use crate::parse::Node;
+use crate::stream::Error;
 
 use std::collections::HashMap;
 
 pub type Labels = HashMap<String, usize>;
 
 pub trait Storage {
-    fn get(&self, i: u32, n: &str) -> Result<u32, Error>;
-    fn set(&mut self, i: u32, v: u32, n: &str) -> Result<(), Error>;
+    fn get(&self, i: u32) -> Result<u32, Error>;
+    fn set(&mut self, i: u32, v: u32) -> Result<(), Error>;
     fn count(&self) -> usize;
 }
 
@@ -30,7 +30,7 @@ impl<'a> Iterator for StorageIterator<'a> {
     type Item = (u32, u32);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(itm) = (*self.mem).get(self.pos, "").ok() {
+        if let Some(itm) = (*self.mem).get(self.pos).ok() {
             self.pos += 1;
             Some((self.pos - 1, itm))
         } else {
@@ -69,8 +69,6 @@ impl Eval for Vec<Node> {
         regs: &mut impl Storage,
         mem: &mut impl Storage,
     ) -> Result<(), Error> {
-        let regstr = "Register";
-        let memstr = "Memory Address";
         let mut last = Comparison::None;
         let mut idx = 0;
         loop {
@@ -79,30 +77,30 @@ impl Eval for Vec<Node> {
             }
             match &self[idx] {
                 Node::Ldr(reg, memref) => {
-                    regs.set(*reg, mem.get(*memref, memstr)?, regstr)?;
+                    regs.set(*reg, mem.get(*memref)?)?;
                     last = Comparison::None;
                 }
                 Node::Str(reg, memref) => {
-                    mem.set(*memref, regs.get(*reg, regstr)?, memstr)?;
+                    mem.set(*memref, regs.get(*reg)?)?;
                     last = Comparison::None;
                 }
                 Node::Add(dest, source, other) => {
-                    let val = regs.get(*source, regstr)?.wrapping_add(other.value(regs)?);
-                    regs.set(*dest, val, regstr)?;
+                    let val = regs.get(*source)?.wrapping_add(other.value(regs)?);
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Sub(dest, source, other) => {
-                    let val = regs.get(*source, regstr)?.wrapping_sub(other.value(regs)?);
-                    regs.set(*dest, val, regstr)?;
+                    let val = regs.get(*source)?.wrapping_sub(other.value(regs)?);
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Mov(dest, source) => {
                     let val = source.value(regs)?;
-                    regs.set(*dest, val, regstr)?;
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Cmp(a, b) => {
-                    let a = regs.get(*a, regstr)?;
+                    let a = regs.get(*a)?;
                     let b = b.value(regs)?;
                     last = if a == b {
                         Comparison::Equal
@@ -141,33 +139,33 @@ impl Eval for Vec<Node> {
                     last = Comparison::None;
                 }
                 Node::And(dest, source, other) => {
-                    let val = regs.get(*source, regstr)? & other.value(regs)?;
-                    regs.set(*dest, val, regstr)?;
+                    let val = regs.get(*source)? & other.value(regs)?;
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Orr(dest, source, other) => {
-                    let val = regs.get(*source, regstr)? | other.value(regs)?;
-                    regs.set(*dest, val, regstr)?;
+                    let val = regs.get(*source)? | other.value(regs)?;
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Eor(dest, source, other) => {
-                    let val = regs.get(*source, regstr)? ^ other.value(regs)?;
-                    regs.set(*dest, val, regstr)?;
+                    let val = regs.get(*source)? ^ other.value(regs)?;
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Mvn(dest, source) => {
                     let val = !source.value(regs)?;
-                    regs.set(*dest, val, regstr)?;
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Lsl(dest, source, other) => {
-                    let val = regs.get(*source, regstr)? << other.value(regs)?;
-                    regs.set(*dest, val, regstr)?;
+                    let val = regs.get(*source)? << other.value(regs)?;
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Lsr(dest, source, other) => {
-                    let val = regs.get(*source, regstr)? >> other.value(regs)?;
-                    regs.set(*dest, val, regstr)?;
+                    let val = regs.get(*source)? >> other.value(regs)?;
+                    regs.set(*dest, val)?;
                     last = Comparison::None;
                 }
                 Node::Halt => break Ok(()),

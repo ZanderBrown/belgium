@@ -1,5 +1,5 @@
-use std::fmt;
 use std::error;
+use std::fmt;
 
 /// Line, Column
 #[derive(Debug)]
@@ -29,7 +29,7 @@ impl error::Error for Error {
 
 impl Error {
     pub fn new(message: String, point: Option<Point>) -> Self {
-        Self {message, point}
+        Self { message, point }
     }
 }
 

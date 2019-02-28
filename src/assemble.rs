@@ -34,29 +34,29 @@ impl Assemble for Input {
         let (nodes, labels) = self.parse()?;
         for (i, node) in nodes.iter().enumerate() {
             match node {
-                Node::Ldr(dest, mem) => {
-                    let ins = LDR | (dest << 12) | mem;
-                    storage.set(i as u32, ins, "memory")?;
+                Node::Ldr(src, mem) => {
+                    let ins = LDR | (src << 16) | mem;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Str(src, mem) => {
                     let ins = STR | (src << 16) | mem;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Add(dest, src, operand) => {
                     let ins = ADD | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Sub(dest, src, operand) => {
                     let ins = SUB | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Mov(dest, operand) => {
                     let ins = MOV | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Cmp(src, operand) => {
                     let ins = CMP | (src << 16) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::B(cond, label) => {
                     let cond = match cond {
@@ -68,37 +68,37 @@ impl Assemble for Input {
                     };
                     if let Some(pos) = labels.get(label) {
                         let ins = cond | B | (*pos as u32);
-                        storage.set(i as u32, ins, "memory")?;
+                        storage.set(i as u32, ins)?;
                     } else {
                         return Err(Error::new(format!("Unkown label {}", label), None));
                     }
                 }
                 Node::And(dest, src, operand) => {
                     let ins = AND | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Orr(dest, src, operand) => {
                     let ins = ORR | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Eor(dest, src, operand) => {
                     let ins = EOR | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Mvn(dest, operand) => {
                     let ins = MVN | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Lsl(dest, src, operand) => {
                     let ins = LSL | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Lsr(dest, src, operand) => {
                     let ins = LSR | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins, "memory")?;
+                    storage.set(i as u32, ins)?;
                 }
                 Node::Halt => {
-                    storage.set(i as u32, HALT, "memory")?;
+                    storage.set(i as u32, HALT)?;
                 }
             }
         }

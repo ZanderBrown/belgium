@@ -1,6 +1,6 @@
 use crate::eval::Storage;
-use crate::stream::Input;
 use crate::stream::Error;
+use crate::stream::Input;
 use crate::stream::Token;
 
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ pub enum Operand {
 impl Operand {
     pub fn value(&self, regs: &impl Storage) -> Result<u32, Error> {
         match self {
-            Operand::Register(r) => regs.get(*r, "Register"),
+            Operand::Register(r) => regs.get(*r),
             Operand::Literal(l) => Ok(*l),
         }
     }
