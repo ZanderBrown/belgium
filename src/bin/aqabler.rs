@@ -86,8 +86,18 @@ fn main() {
                         for (i, v) in Storage::iter(&main) {
                             println!("0x{:04X}: 0x{:08X} {}", i, v, v);
                         }
-                        if let Err(err) = execute(&mut main, &mut regs) {
+                        if let Err(err) = regs.set(COUNTER, 0) {
                             println!("{}", err);
+                        }
+                        loop {
+                            match execute(&mut main, &mut regs) {
+                                Ok(res) => {
+                                    if !res {
+                                        break
+                                    }
+                                }
+                                Err(err) => println!("{}", err)
+                            }
                         }
                     }
                     // Opps error
