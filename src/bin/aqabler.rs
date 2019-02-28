@@ -1,11 +1,9 @@
 use aqabler::execute;
 use aqabler::Assemble;
 use aqabler::ChangeEvent;
-use aqabler::Eval;
 use aqabler::Input;
 use aqabler::Memory;
 use aqabler::Observer;
-use aqabler::Parser;
 use aqabler::Storage;
 use aqabler::{ADDRESS, CIR, COUNTER, MBUFF, STATUS};
 
@@ -82,32 +80,18 @@ fn main() {
                 let rc: Rc<Observer<ChangeEvent>> = Rc::new(MChange {});
                 main.add_observer(Rc::downgrade(&rc));
                 let mut inp = Input::from(program);
-                if matches.opt_present("c") {
-                    match inp.parse() {
-                        Ok((p, l)) => {
-                            // Run the program
-                            if let Err(e) = p.eval(&l, &mut regs, &mut main) {
-                                // Showing any error
-                                println!("{}", e);
-                            }
+                // Parse the program
+                match inp.assemble(&mut main) {
+                    Ok(()) => {
+                        for (i, v) in Storage::iter(&main) {
+                            println!("0x{:04X}: 0x{:08X} {}", i, v, v);
                         }
-                        // Opps syntax error
-                        Err(e) => println!("{}", e),
-                    }
-                } else {
-                    // Parse the program
-                    match inp.assemble(&mut main) {
-                        Ok(()) => {
-                            for (i, v) in Storage::iter(&main) {
-                                println!("0x{:04X}: 0x{:08X} {}", i, v, v);
-                            }
-                            if let Err(err) = execute(&mut main, &mut regs) {
-                                println!("{}", err);
-                            }
+                        if let Err(err) = execute(&mut main, &mut regs) {
+                            println!("{}", err);
                         }
-                        // Opps syntax error
-                        Err(e) => println!("{}", e),
                     }
+                    // Opps error
+                    Err(e) => println!("{}", e),
                 }
                 // Show the end state of the registers
                 for (i, v) in Storage::iter(&regs) {

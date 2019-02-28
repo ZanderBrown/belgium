@@ -1,4 +1,4 @@
-use crate::eval::Storage;
+use crate::storage::Storage;
 use crate::stream::Error;
 use crate::stream::Input;
 use crate::stream::Token;

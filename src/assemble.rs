@@ -2,11 +2,11 @@ use crate::cpu::{
     ADD, AND, B, CMP, COND_EQ, COND_GT, COND_LT, COND_NE, COND_NONE, EOR, HALT, IMMEDIATE, LDR,
     LSL, LSR, MOV, MVN, ORR, STR, SUB,
 };
-use crate::eval::Storage;
 use crate::parse::Comparison;
 use crate::parse::Node;
 use crate::parse::Operand;
 use crate::parse::Parser;
+use crate::storage::Storage;
 use crate::stream::Error;
 use crate::stream::Input;
 

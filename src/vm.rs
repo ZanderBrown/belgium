@@ -3,7 +3,7 @@ use crate::cpu::{
     DATA, DEST, EOR, HALT, IMMEDIATE, LDR, LSL, LSR, MBUFF, MOV, MVN, OFFSET, OPERATION, ORR,
     SHIFT, SOURCE, STATUS, STR, SUB,
 };
-use crate::eval::Storage;
+use crate::storage::Storage;
 use crate::stream::Error;
 
 fn decode(n: u32, regs: &mut dyn Storage) -> Result<u32, Error> {
