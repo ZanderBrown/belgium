@@ -93,10 +93,10 @@ fn main() {
                             match execute(&mut main, &mut regs) {
                                 Ok(res) => {
                                     if !res {
-                                        break
+                                        break;
                                     }
                                 }
-                                Err(err) => println!("{}", err)
+                                Err(err) => println!("{}", err),
                             }
                         }
                     }

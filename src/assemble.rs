@@ -10,18 +10,10 @@ use crate::storage::Storage;
 use crate::stream::Error;
 use crate::stream::Input;
 
-fn encode(n: &Operand) -> Result<u32, Error> {
+fn encode(n: &Operand) -> u32 {
     match n {
-        Operand::Literal(n) => {
-            for i in 0..16 {
-                let m = n.rotate_left(i * 2);
-                if m < 256 {
-                    return Ok(IMMEDIATE | (i << 8) | m);
-                }
-            }
-            Err(Error::new(String::from("Bad number"), None))
-        }
-        Operand::Register(n) => Ok(*n),
+        Operand::Literal(n) => IMMEDIATE | n,
+        Operand::Register(n) => *n,
     }
 }
 
@@ -33,30 +25,32 @@ impl Assemble for Input {
     fn assemble(&mut self, storage: &mut impl Storage) -> Result<(), Error> {
         let (nodes, labels) = self.parse()?;
         for (i, node) in nodes.iter().enumerate() {
+            #[allow(clippy::cast_possible_truncation)]
+            let i = i as u32;
             match node {
                 Node::Ldr(src, mem) => {
                     let ins = LDR | (src << 16) | mem;
-                    storage.set(i as u32, ins)?;
+                    storage.set(i, ins)?;
                 }
                 Node::Str(src, mem) => {
                     let ins = STR | (src << 16) | mem;
-                    storage.set(i as u32, ins)?;
+                    storage.set(i, ins)?;
                 }
                 Node::Add(dest, src, operand) => {
-                    let ins = ADD | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = ADD | (src << 16) | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Sub(dest, src, operand) => {
-                    let ins = SUB | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = SUB | (src << 16) | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Mov(dest, operand) => {
-                    let ins = MOV | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = MOV | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Cmp(src, operand) => {
-                    let ins = CMP | (src << 16) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = CMP | (src << 16) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::B(cond, label) => {
                     let cond = match cond {
@@ -67,38 +61,39 @@ impl Assemble for Input {
                         Comparison::Greater => COND_GT,
                     };
                     if let Some(pos) = labels.get(label) {
+                        #[allow(clippy::cast_possible_truncation)]
                         let ins = cond | B | (*pos as u32);
-                        storage.set(i as u32, ins)?;
+                        storage.set(i, ins)?;
                     } else {
                         return Err(Error::new(format!("Unkown label {}", label), None));
                     }
                 }
                 Node::And(dest, src, operand) => {
-                    let ins = AND | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = AND | (src << 16) | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Orr(dest, src, operand) => {
-                    let ins = ORR | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = ORR | (src << 16) | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Eor(dest, src, operand) => {
-                    let ins = EOR | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = EOR | (src << 16) | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Mvn(dest, operand) => {
-                    let ins = MVN | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = MVN | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Lsl(dest, src, operand) => {
-                    let ins = LSL | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = LSL | (src << 16) | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Lsr(dest, src, operand) => {
-                    let ins = LSR | (src << 16) | (dest << 12) | encode(operand)?;
-                    storage.set(i as u32, ins)?;
+                    let ins = LSR | (src << 16) | (dest << 12) | encode(operand);
+                    storage.set(i, ins)?;
                 }
                 Node::Halt => {
-                    storage.set(i as u32, HALT)?;
+                    storage.set(i, HALT)?;
                 }
             }
         }

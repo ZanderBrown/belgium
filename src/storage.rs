@@ -7,24 +7,24 @@ pub trait Storage {
 }
 
 impl Storage {
-    pub fn iter<'a>(&'a self) -> StorageIterator<'a> {
-        StorageIterator {
+    pub fn iter(&self) -> Iter {
+        Iter {
             mem: Box::new(self),
             pos: 0,
         }
     }
 }
 
-pub struct StorageIterator<'a> {
+pub struct Iter<'a> {
     mem: Box<&'a Storage>,
     pos: u32,
 }
 
-impl<'a> Iterator for StorageIterator<'a> {
+impl<'a> Iterator for Iter<'a> {
     type Item = (u32, u32);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(itm) = (*self.mem).get(self.pos).ok() {
+        if let Ok(itm) = (*self.mem).get(self.pos) {
             self.pos += 1;
             Some((self.pos - 1, itm))
         } else {

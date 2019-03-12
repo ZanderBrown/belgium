@@ -1,4 +1,3 @@
-use crate::storage::Storage;
 use crate::stream::Error;
 use crate::stream::Input;
 use crate::stream::Token;
@@ -12,15 +11,6 @@ pub type Label = String;
 pub enum Operand {
     Register(Register),
     Literal(u32),
-}
-
-impl Operand {
-    pub fn value(&self, regs: &impl Storage) -> Result<u32, Error> {
-        match self {
-            Operand::Register(r) => regs.get(*r),
-            Operand::Literal(l) => Ok(*l),
-        }
-    }
 }
 
 #[derive(PartialEq)]
@@ -69,14 +59,6 @@ fn encode(n: u32) -> Option<u32> {
     None
 }
 
-fn to_immediate(val: u32) -> Option<u32> {
-    if let Some(_encoded) = encode(val) {
-        Some(val)
-    } else {
-        None
-    }
-}
-
 impl Parser for Input {
     fn register(&mut self) -> Result<Register, Error> {
         if let Some(tok) = self.next() {
@@ -105,7 +87,7 @@ impl Parser for Input {
             match tok? {
                 Token::Register(r) => Ok(Operand::Register(r)),
                 Token::Number(r) => {
-                    if let Some(r) = to_immediate(r) {
+                    if let Some(r) = encode(r) {
                         Ok(Operand::Literal(r))
                     } else {
                         Err(self.error(format!("Can't encode {}", r)))

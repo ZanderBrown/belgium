@@ -1,3 +1,6 @@
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+
 mod assemble;
 mod cpu;
 mod memory;

@@ -17,7 +17,7 @@ impl Memory {
         self.listeners.push(obs);
     }
 
-    pub fn emit(&self, evt: ChangeEvent) {
+    pub fn emit(&self, evt: &ChangeEvent) {
         for l in &self.listeners.clone() {
             if let Some(ref l) = l.upgrade() {
                 l.notify(evt.clone());
@@ -58,7 +58,7 @@ impl Storage for Memory {
             Err(Error::new(format!("Invalid {} {}", self.name, i), None))
         } else {
             self.backing[i as usize] = v;
-            self.emit(ChangeEvent { idx: i, val: v });
+            self.emit(&ChangeEvent { idx: i, val: v });
             Ok(())
         }
     }
