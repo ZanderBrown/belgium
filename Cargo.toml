@@ -8,7 +8,7 @@ edition = "2018"
 default = ["getopts"]
 
 [dependencies]
-getopts = { version = "0.2.18", optional = true }
+getopts = { version = "0.2.19", optional = true }
 
 [[bin]]
 name="aqabler"
