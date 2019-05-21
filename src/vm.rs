@@ -1,7 +1,7 @@
 use crate::cpu::{
     ADD, ADDRESS, AND, B, CIR, CMP, COND, COND_EQ, COND_GT, COND_LT, COND_NE, COND_NONE, COUNTER,
-    DATA, DEST, EOR, HALT, IMMEDIATE, LDR, LSL, LSR, MBUFF, MOV, MVN, OFFSET, OPERATION, ORR,
-    SHIFT, SOURCE, STATUS, STR, SUB,
+    DATA, DEST, EOR, HALT, IMMEDIATE, INDIRECT, LDR, LSL, LSR, MBUFF, MOV, MVN, OFFSET, OPERATION,
+    ORR, SHIFT, SOURCE, STATUS, STR, SUB,
 };
 use crate::storage::Storage;
 use crate::stream::Error;
@@ -30,7 +30,11 @@ pub fn execute(memory: &mut dyn Storage, regs: &mut dyn Storage) -> Result<bool,
             let src = (cir & SOURCE) >> 16;
             let mem = cir & OFFSET;
 
-            regs.set(ADDRESS, mem)?;
+            if cir & INDIRECT == 0 {
+                regs.set(ADDRESS, mem)?;
+            } else {
+                regs.set(ADDRESS, regs.get(mem)?)?;
+            }
             regs.set(MBUFF, memory.get(regs.get(ADDRESS)?)?)?;
 
             regs.set(src, regs.get(MBUFF)?)?;
@@ -39,7 +43,11 @@ pub fn execute(memory: &mut dyn Storage, regs: &mut dyn Storage) -> Result<bool,
             let src = (cir & SOURCE) >> 16;
             let mem = cir & OFFSET;
 
-            regs.set(ADDRESS, mem)?;
+            if cir & INDIRECT == 0 {
+                regs.set(ADDRESS, mem)?;
+            } else {
+                regs.set(ADDRESS, regs.get(mem)?)?;
+            }
             regs.set(MBUFF, regs.get(src)?)?;
 
             memory.set(regs.get(ADDRESS)?, regs.get(MBUFF)?)?;

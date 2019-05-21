@@ -14,3 +14,8 @@ getopts = { version = "0.2.19", optional = true }
 name="aqabler"
 path="src/bin/aqabler.rs"
 required-features = ["getopts"]
+
+[[bin]]
+name="aqavm"
+path="src/bin/aqavm.rs"
+required-features = ["getopts"]

@@ -17,6 +17,6 @@ cargo build --release
 ```
 To make a release build of aqabler or to compile & run
 ```
-cargo run --release <file.aqb>
+cargo run --release --bin aqabler <file.aqb>
 ```
 Where `<file.aqb>` is a path to a file containing AQA ALI code

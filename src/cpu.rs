@@ -1,4 +1,5 @@
 pub const COND: u32 = 0xF000_0000;
+pub const INDIRECT: u32 = 0x0200_0000;
 pub const IMMEDIATE: u32 = 0x0100_0000;
 pub const OPERATION: u32 = 0x00F0_0000;
 pub const SOURCE: u32 = 0x000F_0000;
