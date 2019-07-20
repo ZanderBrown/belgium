@@ -89,7 +89,12 @@ pub fn execute(memory: &mut dyn Storage, regs: &mut dyn Storage) -> Result<bool,
             )?;
         }
         B => {
-            let offset = cir & OFFSET;
+            let offset = if (cir & OFFSET) & INDIRECT == 0 {
+                cir & OFFSET
+            } else {
+                regs.get(cir & OFFSET)?
+            };
+
             match cir & COND {
                 COND_NONE => {
                     regs.set(COUNTER, offset)?;

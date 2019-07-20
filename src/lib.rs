@@ -11,7 +11,11 @@ mod vm;
 
 // Make enough public to easily run programs
 pub use crate::assemble::Assemble;
-pub use crate::cpu::{ADDRESS, CIR, COUNTER, MBUFF, STATUS};
+pub use crate::cpu::{
+    ADD, ADDRESS, AND, B, CIR, CMP, COND, COND_EQ, COND_GT, COND_LT, COND_NE, COND_NONE, COUNTER,
+    DATA, DEST, EOR, HALT, IMMEDIATE, INDIRECT, LDR, LSL, LSR, MBUFF, MOV, MVN, OFFSET, OPERATION,
+    ORR, SHIFT, SOURCE, STATUS, STR, SUB,
+};
 pub use crate::memory::ChangeEvent;
 pub use crate::memory::Memory;
 pub use crate::memory::Observer;
