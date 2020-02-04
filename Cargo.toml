@@ -3,6 +3,7 @@ name = "belgium"
 version = "0.1.0"
 authors = ["Zander Brown <ab19abm@herts.ac.uk>"]
 edition = "2018"
+default-run = "belgium"
 
 [features]
 default = ["getopts"]
@@ -11,15 +12,15 @@ default = ["getopts"]
 getopts = { version = "0.2.19", optional = true }
 
 [lib]
-name = "aqabler"
+name = "belgium"
 path = "src/lib.rs"
 
 [[bin]]
-name="aqabler"
-path="src/bin/aqabler.rs"
+name="belgium"
+path="src/bin/belgium.rs"
 required-features = ["getopts"]
 
 [[bin]]
-name="aqavm"
-path="src/bin/aqavm.rs"
+name="belgium-vm"
+path="src/bin/vm.rs"
 required-features = ["getopts"]

@@ -25,6 +25,7 @@ impl Memory {
         }
     }
 
+    #[must_use]
     pub fn create(name: String, count: usize) -> Self {
         let mut backing = Vec::with_capacity(count);
         for _ in 0..count {

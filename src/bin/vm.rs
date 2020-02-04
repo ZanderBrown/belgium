@@ -1,16 +1,12 @@
-use aqabler::execute;
-use aqabler::Assemble;
-use aqabler::ChangeEvent;
-use aqabler::Input;
-use aqabler::Memory;
-use aqabler::Observer;
-use aqabler::Storage;
-use aqabler::{ADDRESS, CIR, COUNTER, MBUFF, STATUS};
+use belgium::execute;
+use belgium::ChangeEvent;
+use belgium::Memory;
+use belgium::Observer;
+use belgium::Storage;
+use belgium::{ADDRESS, CIR, COUNTER, MBUFF, STATUS};
 
 use std::env;
-use std::fs::read_to_string;
-use std::fs::File;
-use std::io::Write;
+use std::fs::read;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -81,7 +77,6 @@ fn main() {
     opts.optflag("r", "registers", "show final state of registers");
     opts.optopt("s", "mem-size", "set the size of memory (default=500)", "");
     opts.optflag("h", "help", "print this help menu");
-    opts.optopt("o", "", "output machine code", "NAME");
 
     // Try and parse the arguments
     let matches = match opts.parse(&arguments[1..]) {
@@ -127,7 +122,7 @@ fn main() {
     let path = Path::new(&input);
     if path.exists() {
         // Read the file into a string
-        match read_to_string(path) {
+        match read(path) {
             Ok(program) => {
                 // We have 12 registers
                 let mut regs = Memory::create(String::from("register"), 18);
@@ -146,66 +141,49 @@ fn main() {
                     main.add_observer(Rc::downgrade(&rc));
                 }
 
-                let mut inp = Input::from(program);
-                // Parse the program
-                match inp.assemble(&mut main) {
-                    Ok(()) => {
-                        if matches.opt_present("o") {
-                            if let Some(output) = matches.opt_str("o") {
-                                match File::create(output) {
-                                    Ok(mut file) => {
-                                        let mut bytes = Vec::with_capacity(size * 4);
-                                        for (_, v) in Storage::iter(&main) {
-                                            bytes.push((v >> 24) as u8);
-                                            bytes.push((v >> 16) as u8);
-                                            bytes.push((v >> 8) as u8);
-                                            bytes.push((v) as u8);
-                                        }
-                                        if let Err(err) = file.write_all(&bytes) {
-                                            println!("Failed to write file: {}", err);
-                                        }
-                                        return;
-                                    }
-                                    Err(err) => println!("Failed to open output: {}", err),
-                                }
-                            } else {
-                                println!("Expected output filename");
+                for i in (0..program.len()).step_by(4) {
+                    if let Err(err) = main.set(
+                        (i / 4) as u32,
+                        (program[i] as u32) << 24
+                            | (program[i + 1] as u32) << 16
+                            | (program[i + 2] as u32) << 8
+                            | (program[i + 3] as u32),
+                    ) {
+                        println!("Failed loading {}: {}", path.display(), err);
+                        break;
+                    }
+                }
+
+                if matches.opt_present("i") {
+                    for (i, v) in Storage::iter(&main) {
+                        println!("0x{:04X}: 0x{:08X} {:10}", i, v, v);
+                    }
+                }
+
+                if let Err(err) = regs.set(COUNTER, 0) {
+                    println!("{}", err);
+                }
+
+                loop {
+                    match execute(&mut main, &mut regs) {
+                        Ok(res) => {
+                            if !res {
+                                break;
                             }
                         }
-
-                        if matches.opt_present("i") {
-                            for (i, v) in Storage::iter(&main) {
-                                println!("0x{:04X}: 0x{:08X} {:10}", i, v, v);
-                            }
-                        }
-
-                        if let Err(err) = regs.set(COUNTER, 0) {
+                        Err(err) => {
                             println!("{}", err);
-                        }
-
-                        loop {
-                            match execute(&mut main, &mut regs) {
-                                Ok(res) => {
-                                    if !res {
-                                        break;
-                                    }
-                                }
-                                Err(err) => {
-                                    println!("{}", err);
-                                    break;
-                                }
-                            }
-                        }
-
-                        if matches.opt_present("f") {
-                            for (i, v) in Storage::iter(&main) {
-                                println!("0x{:04X}: 0x{:08X} {:10}", i, v, v);
-                            }
+                            break;
                         }
                     }
-                    // Opps error
-                    Err(e) => println!("{}", e),
                 }
+
+                if matches.opt_present("f") {
+                    for (i, v) in Storage::iter(&main) {
+                        println!("0x{:04X}: 0x{:08X} {:10}", i, v, v);
+                    }
+                }
+
                 // Show the end state of the registers
                 if matches.opt_present("r") {
                     for (i, v) in Storage::iter(&regs) {
@@ -216,8 +194,5 @@ fn main() {
             // Or not...
             Err(e) => println!("Can't read {}: {}", path.display(), e),
         }
-    } else {
-        // It didn't
-        println!("{} doesn't exist", path.display());
     }
 }

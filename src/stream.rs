@@ -28,6 +28,7 @@ impl error::Error for Error {
 }
 
 impl Error {
+    #[must_use]
     pub fn new(message: String, point: Option<Point>) -> Self {
         Self { message, point }
     }
@@ -66,6 +67,7 @@ impl Input {
     }
 
     /// Generate a syntax error with msg at the current position
+    #[must_use]
     pub fn error(&self, msg: String) -> Error {
         Error::new(msg, Some(Point(self.line, self.col)))
     }
