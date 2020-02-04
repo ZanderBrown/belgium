@@ -18,6 +18,9 @@ fn encode(n: &Operand) -> u32 {
 }
 
 pub trait Assemble {
+    ///
+    /// #Errors
+    /// When encountring a syntax error
     fn assemble(&mut self, mem: &mut impl Storage) -> Result<(), Error>;
 }
 

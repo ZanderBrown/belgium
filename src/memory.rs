@@ -41,7 +41,7 @@ impl Memory {
 pub struct Memory {
     name: String,
     backing: Vec<u32>,
-    listeners: Vec<Weak<Observer<ChangeEvent>>>,
+    listeners: Vec<Weak<dyn Observer<ChangeEvent>>>,
 }
 
 impl Storage for Memory {

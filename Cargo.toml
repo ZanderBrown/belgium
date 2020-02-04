@@ -1,7 +1,7 @@
 [package]
-name = "aqabler"
-version = "0.2.0"
-authors = ["Zander Brown <ZanderBrown@users.noreply.github.com>"]
+name = "belgium"
+version = "0.1.0"
+authors = ["Zander Brown <ab19abm@herts.ac.uk>"]
 edition = "2018"
 
 [features]
@@ -9,6 +9,10 @@ default = ["getopts"]
 
 [dependencies]
 getopts = { version = "0.2.19", optional = true }
+
+[lib]
+name = "aqabler"
+path = "src/lib.rs"
 
 [[bin]]
 name="aqabler"

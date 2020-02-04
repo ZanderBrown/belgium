@@ -6,7 +6,7 @@ pub trait Storage {
     fn count(&self) -> usize;
 }
 
-impl Storage {
+impl dyn Storage {
     pub fn iter(&self) -> Iter {
         Iter {
             mem: Box::new(self),
@@ -16,7 +16,7 @@ impl Storage {
 }
 
 pub struct Iter<'a> {
-    mem: Box<&'a Storage>,
+    mem: Box<&'a dyn Storage>,
     pos: u32,
 }
 

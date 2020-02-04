@@ -128,7 +128,7 @@ fn main() {
                 let mut regs = Memory::create(String::from("register"), 18);
 
                 // Declared outside the if to keep a local reference
-                let rc: Rc<Observer<ChangeEvent>> = Rc::new(RChange {
+                let rc: Rc<dyn Observer<ChangeEvent>> = Rc::new(RChange {
                     verbose: matches.opt_present("v"),
                 });
                 if matches.opt_present("v") || matches.opt_present("c") {
@@ -136,7 +136,7 @@ fn main() {
                 }
 
                 let mut main = Memory::create(String::from("memory"), size);
-                let rc: Rc<Observer<ChangeEvent>> = Rc::new(MChange {});
+                let rc: Rc<dyn Observer<ChangeEvent>> = Rc::new(MChange {});
                 if matches.opt_present("m") {
                     main.add_observer(Rc::downgrade(&rc));
                 }
