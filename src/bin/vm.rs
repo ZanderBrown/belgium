@@ -1,9 +1,7 @@
-use belgium::execute;
 use belgium::ChangeEvent;
-use belgium::Memory;
+use belgium::Machine;
 use belgium::Observer;
-use belgium::Storage;
-use belgium::{ADDRESS, CIR, COUNTER, MBUFF, STATUS};
+use belgium::{COUNTER, STACK, STATUS};
 
 use std::env;
 use std::fs::read;
@@ -21,30 +19,20 @@ impl Observer<ChangeEvent> for RChange {
         match evt.idx {
             COUNTER => {
                 if self.verbose {
-                    println!("Counter     to 0x{:08X}", evt.val)
-                }
-            }
-            ADDRESS => {
-                if self.verbose {
-                    println!("Address     to 0x{:08X}", evt.val)
-                }
-            }
-            MBUFF => {
-                if self.verbose {
-                    println!("Buffer      to 0x{:08X}", evt.val)
-                }
-            }
-            CIR => {
-                if self.verbose {
-                    println!("Instruction to 0x{:08X}", evt.val)
+                    println!("Counter     to 0x{:02X}", evt.val)
                 }
             }
             STATUS => {
                 if self.verbose {
-                    println!("Status      to 0x{:08X}", evt.val)
+                    println!("Status      to 0x{:02X}", evt.val)
                 }
             }
-            _ => println!("R{:02}         to 0x{:08X} ({})", evt.idx, evt.val, evt.val),
+            STACK => {
+                if self.verbose {
+                    println!("Stack       to 0x{:02X}", evt.val)
+                }
+            }
+            _ => println!("R{:02}         to 0x{:02X} ({})", evt.idx, evt.val, evt.val),
         }
     }
 }
@@ -53,7 +41,10 @@ struct MChange;
 
 impl Observer<ChangeEvent> for MChange {
     fn notify(&self, evt: ChangeEvent) {
-        println!("Memory {:04} to 0x{:08X} ({})", evt.idx, evt.val, evt.val);
+        println!(
+            "Memory 0x{:02X} to 0x{:02X} ({})",
+            evt.idx, evt.val, evt.val
+        );
     }
 }
 
@@ -75,7 +66,6 @@ fn main() {
     opts.optflag("i", "dump-inital", "show inital state of memory");
     opts.optflag("f", "dump-final", "show final state of memory");
     opts.optflag("r", "registers", "show final state of registers");
-    opts.optopt("s", "mem-size", "set the size of memory (default=500)", "");
     opts.optflag("h", "help", "print this help menu");
 
     // Try and parse the arguments
@@ -107,65 +97,39 @@ fn main() {
         matches.free[0].clone()
     };
 
-    let size = if let Some(s) = matches.opt_str("s") {
-        if let Ok(size) = s.parse() {
-            size
-        } else {
-            println!("Unrecognised number '{}'", s);
-            return;
-        }
-    } else {
-        500
-    };
-
     // Check the file exists
     let path = Path::new(&input);
     if path.exists() {
         // Read the file into a string
         match read(path) {
             Ok(program) => {
-                // We have 12 registers
-                let mut regs = Memory::create(String::from("register"), 18);
+                let mut machine = Machine::new();
 
                 // Declared outside the if to keep a local reference
                 let rc: Rc<dyn Observer<ChangeEvent>> = Rc::new(RChange {
                     verbose: matches.opt_present("v"),
                 });
                 if matches.opt_present("v") || matches.opt_present("c") {
-                    regs.add_observer(Rc::downgrade(&rc));
+                    machine.add_reg_observer(Rc::downgrade(&rc));
                 }
 
-                let mut main = Memory::create(String::from("memory"), size);
                 let rc: Rc<dyn Observer<ChangeEvent>> = Rc::new(MChange {});
                 if matches.opt_present("m") {
-                    main.add_observer(Rc::downgrade(&rc));
+                    machine.add_mem_observer(Rc::downgrade(&rc));
                 }
 
-                for i in (0..program.len()).step_by(4) {
-                    if let Err(err) = main.set(
-                        (i / 4) as u32,
-                        (program[i] as u32) << 24
-                            | (program[i + 1] as u32) << 16
-                            | (program[i + 2] as u32) << 8
-                            | (program[i + 3] as u32),
-                    ) {
-                        println!("Failed loading {}: {}", path.display(), err);
-                        break;
-                    }
+                for i in 0..program.len() {
+                    machine.set_mem(i as u8, program[i]);
                 }
 
                 if matches.opt_present("i") {
-                    for (i, v) in Storage::iter(&main) {
+                    for (i, v) in machine.iter_mem() {
                         println!("0x{:04X}: 0x{:08X} {:10}", i, v, v);
                     }
                 }
 
-                if let Err(err) = regs.set(COUNTER, 0) {
-                    println!("{}", err);
-                }
-
                 loop {
-                    match execute(&mut main, &mut regs) {
+                    match machine.step() {
                         Ok(res) => {
                             if !res {
                                 break;
@@ -179,15 +143,17 @@ fn main() {
                 }
 
                 if matches.opt_present("f") {
-                    for (i, v) in Storage::iter(&main) {
+                    for (i, v) in machine.iter_mem() {
                         println!("0x{:04X}: 0x{:08X} {:10}", i, v, v);
                     }
                 }
 
                 // Show the end state of the registers
                 if matches.opt_present("r") {
-                    for (i, v) in Storage::iter(&regs) {
-                        println!("R{:02}: {}", i, v);
+                    for i in 0..4 {
+                        if let Ok(v) = machine.reg(i) {
+                            println!("R{:02}: {}", i, v);
+                        }
                     }
                 }
             }

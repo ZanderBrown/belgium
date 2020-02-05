@@ -3,7 +3,7 @@ name = "belgium"
 version = "0.1.0"
 authors = ["Zander Brown <ab19abm@herts.ac.uk>"]
 edition = "2018"
-default-run = "belgium"
+# default-run = "belgium"
 
 [features]
 default = ["getopts"]
@@ -15,10 +15,10 @@ getopts = { version = "0.2.19", optional = true }
 name = "belgium"
 path = "src/lib.rs"
 
-[[bin]]
-name="belgium"
-path="src/bin/belgium.rs"
-required-features = ["getopts"]
+# [[bin]]
+# name="belgium"
+# path="src/bin/belgium.rs"
+# required-features = ["getopts"]
 
 [[bin]]
 name="belgium-vm"
