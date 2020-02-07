@@ -3,7 +3,7 @@ use crate::op2;
 use crate::opcodes::HALT;
 use crate::opcodes::{
     ADD, AND, CMP, DEC, INC, LOAD, LOAD_I, MOVE, NEG, NOT, NOT_NEG_INC_DEC, OPERATION, OR, SHIFT,
-    SHLA, SHRA, STORE, SUB,
+    SHLA, SHRA, STORE, SUB, STACK, POP, PUSH, SHL, SHLA, SHRA
 };
 use crate::stream::Error;
 use std::rc::Weak;
@@ -14,7 +14,7 @@ pub const REG_SIZE: u8 = 4 + 3;
 
 pub const COUNTER: u8 = 4;
 pub const STATUS: u8 = 5;
-pub const STACK: u8 = 6;
+pub const SP: u8 = 6;
 
 #[derive(Clone)]
 pub struct ChangeEvent {
@@ -208,20 +208,39 @@ impl Machine {
                 )?;
             }
             SHIFT => {
-                let rn = op1!(instruction);
-                let rm = op2!(instruction);
+                let mode = op1!(instruction);
+                let rn = op2!(instruction);
 
-                let old = self.reg(rm)?;
+                let old = self.reg(rn)?;
 
                 // TODO: Update STATUS
                 self.set_reg(
-                    rm,
-                    match rn {
+                    rn,
+                    match mode {
                         SHLA => old << 1,
                         SHRA => old >> 1,
+                        ROL => old.rotate_left(1),
                         n => panic!("wat {}", n),
                     },
                 )?;
+            }
+            STACK => {
+                let mode = op1!(instruction);
+                let rn = op2!(instruction);
+                let sp = self.reg(SP)?;
+
+                match mode {
+                    PUSH => {
+                        sp += 1;
+                        self.set_reg(sp, rn);
+                    }
+                    POP => {
+                        self.set_reg(rn, self.reg(sp)?)?;
+                        sp -= 1;
+                    }
+                }
+
+                self.set_reg(SP, sp)?;
             }
             _ => return Err(Error::new(String::from("Unknown instruction"), None)),
         }
