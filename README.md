@@ -2,11 +2,15 @@
 
 ![belgium logo](logo.png)
 
-Belgium, an implementation of CdM-8 assembly.
+Belgium, an implementation of CdM-8.
+
+Currently only implements a VM supporting a subset of opcodes
 
 The implementation is in [Rust](https://www.rust-lang.org/) as it provides
 native performance but with a smarter compiler and built-in WASM support. Also
 because I like it.
+
+Partially based on reversing Cocas/CocoIDE (c) Prof. Alex Shaferenko
 
 ## Usage
 
