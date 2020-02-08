@@ -1,22 +1,32 @@
 pub const OPERATION: u8 = 0b1111_0000;
 
-pub const MOVE: u8 = 0b0000_0000;
-pub const ADD: u8 = 0b0001_0000;
-pub const ADDC: u8 = 0b0010_0000;
-pub const SUB: u8 = 0b0011_0000;
-pub const AND: u8 = 0b0100_0000;
-pub const OR: u8 = 0b0101_0000;
-pub const XOR: u8 = 0b0110_0000;
-pub const CMP: u8 = 0b0111_0000;
-pub const NOT_NEG_INC_DEC: u8 = 0b1000_0000;
-pub const SHIFT: u8 = 0b1001_0000;
-pub const STORE: u8 = 0b1010_0000;
-pub const LOAD: u8 = 0b1011_0000;
-pub const STACK: u8 = 0b1100_0000;
-pub const LOAD_I: u8 = 0b1101_0000;
-pub const BRANCH: u8 = 0b1110_0000;
-pub const LOAD_: u8 = 0b1111_0000;
+// ALU Instructions - Binary
+pub const OP_MOVE: u8 = 0b0000_0000;
+pub const OP_ADD: u8 = 0b0001_0000;
+pub const OP_ADDC: u8 = 0b0010_0000;
+pub const OP_SUB: u8 = 0b0011_0000;
+pub const OP_AND: u8 = 0b0100_0000;
+pub const OP_OR: u8 = 0b0101_0000;
+pub const OP_XOR: u8 = 0b0110_0000;
+pub const OP_CMP: u8 = 0b0111_0000;
 
+// ALU Instructions - Unary
+pub const OP_NOT_NEG_INC_DEC: u8 = 0b1000_0000;
+pub const OP_SHIFT: u8 = 0b1001_0000;
+
+// Memory
+pub const OP_STORE: u8 = 0b1010_0000;
+pub const OP_LOAD: u8 = 0b1011_0000;
+pub const OP_STACK: u8 = 0b1100_0000;
+pub const OP_LOAD_I: u8 = 0b1101_0000;
+
+// Flow
+pub const OP_BRANCH: u8 = 0b1110_0000;
+
+// ???
+pub const OP_LOAD_C: u8 = 0b1111_0000;
+
+// Magic instruction for stopping the clock
 pub const HALT: u8 = 0b1101_0100;
 
 // Variants of `NOT_NEG_INC_DEC`
@@ -26,10 +36,10 @@ pub const DEC: u8 = 0b0000_1000;
 pub const INC: u8 = 0b0000_1100;
 
 // Variants of `SHIFT`
-pub const SHL: u8 = 0b0000_0000;
+pub const SHR: u8 = 0b0000_0000;
 pub const SHLA: u8 = 0b0000_0100;
 pub const SHRA: u8 = 0b0000_1000;
-pub const ROL: u8 = 0b0000_1000;
+pub const ROL: u8 = 0b0000_1100;
 
 // Variants of `STACK`
 pub const PUSH: u8 = 0b0000_0000;

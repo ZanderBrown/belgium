@@ -1,7 +1,7 @@
 use belgium::ChangeEvent;
 use belgium::Machine;
 use belgium::Observer;
-use belgium::{COUNTER, STACK, STATUS};
+use belgium::{COUNTER, SP, STATUS};
 
 use std::env;
 use std::fs::read;
@@ -24,15 +24,18 @@ impl Observer<ChangeEvent> for RChange {
             }
             STATUS => {
                 if self.verbose {
-                    println!("Status      to 0x{:02X}", evt.val)
+                    println!("Status      to 0b{:08b}", evt.val)
                 }
             }
-            STACK => {
+            SP => {
                 if self.verbose {
                     println!("Stack       to 0x{:02X}", evt.val)
                 }
             }
-            _ => println!("R{:02}         to 0x{:02X} ({})", evt.idx, evt.val, evt.val),
+            _ => println!(
+                "R{:02}         to 0x{:02X} ({}, {})",
+                evt.idx, evt.val, evt.val, evt.val as i8
+            ),
         }
     }
 }
@@ -152,7 +155,7 @@ fn main() {
                 if matches.opt_present("r") {
                     for i in 0..4 {
                         if let Ok(v) = machine.reg(i) {
-                            println!("R{:02}: {}", i, v);
+                            println!("R{}: 0x{:02X} ({:4}, {:3})", i, v, v as i8, v);
                         }
                     }
                 }

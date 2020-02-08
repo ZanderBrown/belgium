@@ -3,6 +3,10 @@ name = "belgium"
 version = "0.1.0"
 authors = ["Zander Brown <ab19abm@herts.ac.uk>"]
 edition = "2018"
+description = "CdM-8 Implementation"
+license = "GPL-3.0-or-later"
+homepage = "https://github.com/ZanderBrown/belgium"
+repository = "https://github.com/ZanderBrown/belgium"
 # default-run = "belgium"
 
 [features]

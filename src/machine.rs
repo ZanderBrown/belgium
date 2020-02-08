@@ -1,10 +1,8 @@
+use crate::alu::ALU;
 use crate::op1;
 use crate::op2;
 use crate::opcodes::HALT;
-use crate::opcodes::{
-    ADD, AND, CMP, DEC, INC, LOAD, LOAD_I, MOVE, NEG, NOT, NOT_NEG_INC_DEC, OPERATION, OR, SHIFT,
-    SHLA, SHRA, STORE, SUB, STACK, POP, PUSH, SHL, SHLA, SHRA
-};
+use crate::opcodes::{OPERATION, OP_LOAD, OP_LOAD_I, OP_STACK, OP_STORE, POP, PUSH};
 use crate::stream::Error;
 use std::rc::Weak;
 
@@ -76,6 +74,8 @@ impl Machine {
         self.memory[i as usize]
     }
 
+    /// Set a registers values
+    ///
     /// # Errors
     ///
     /// Will return `Err` if `i` is an invalid register
@@ -102,11 +102,37 @@ impl Machine {
 
     fn advanace_counter(&mut self) -> Result<(), Error> {
         let current = self.reg(COUNTER)?;
-        if current as usize + 1 < MEM_SIZE {
-            self.set_reg(COUNTER, current + 1)
-        } else {
-            self.set_reg(COUNTER, 0)
-        }
+        self.set_reg(COUNTER, current.wrapping_add(1))
+    }
+
+    #[must_use]
+    pub fn status(&self) -> u8 {
+        // No need for the bound checking for reg()
+        self.registers[STATUS as usize]
+    }
+
+    /// Get the 'Carry'
+    #[must_use]
+    pub fn c(&self) -> bool {
+        self.status() & 0b0000_1000 != 0
+    }
+
+    /// Get the 'Overflow' flag
+    #[must_use]
+    pub fn v(&self) -> bool {
+        self.status() & 0b0000_0100 != 0
+    }
+
+    /// Get the 'Zero' flag
+    #[must_use]
+    pub fn z(&self) -> bool {
+        self.status() & 0b0000_0010 != 0
+    }
+
+    /// Get the 'Negative' flag
+    #[must_use]
+    pub fn n(&self) -> bool {
+        self.status() & 0b0000_0001 != 0
     }
 
     /// # Errors
@@ -114,6 +140,7 @@ impl Machine {
     /// Will return `Err` on a malformed instruction
     pub fn step(&mut self) -> Result<bool, Error> {
         let instruction = self.mem(self.reg(COUNTER)?);
+        let operation = instruction & OPERATION;
 
         self.advanace_counter()?;
 
@@ -122,127 +149,54 @@ impl Machine {
             return Ok(false);
         }
 
-        match instruction & OPERATION {
-            LOAD => {
-                let address = op1!(instruction);
-                let target = op2!(instruction);
-                self.set_reg(target, self.mem(address))?;
-            }
-            LOAD_I => {
-                let target = op2!(instruction);
-                let address = self.reg(COUNTER)?;
-
-                self.advanace_counter()?;
-
-                self.set_reg(target, self.mem(address))?;
-            }
-            STORE => {
-                let address = op1!(instruction);
-                let source = op2!(instruction);
-
-                self.set_mem(address, self.reg(source)?);
-            }
-            ADD => {
-                let rn = op1!(instruction);
-                let rm = op2!(instruction);
-
-                // TODO: Update STATUS
-                self.set_reg(rm, self.reg(rn)?.wrapping_add(self.reg(rm)?))?;
-            }
-            SUB => {
-                let rn = op1!(instruction);
-                let rm = op2!(instruction);
-
-                // TODO: Update STATUS
-                self.set_reg(self.reg(rm)?, self.reg(rn)?.wrapping_sub(self.reg(rm)?))?;
-            }
-            MOVE => {
-                let rn = op1!(instruction);
-                let rm = op2!(instruction);
-
-                self.set_reg(rm, self.reg(rn)?)?;
-            }
-            CMP => {
-                let rn = op1!(instruction);
-                let rm = op2!(instruction);
-
-                // TODO
-            }
-            AND => {
-                let rn = op1!(instruction);
-                let rm = op2!(instruction);
-
-                self.set_reg(rm, self.reg(rn)? & self.reg(rm)?)?;
-            }
-            OR => {
-                let rn = op1!(instruction);
-                let rm = op2!(instruction);
-
-                self.set_reg(rm, self.reg(rn)? | self.reg(rm)?)?;
-            }
-            NOT_NEG_INC_DEC => {
-                let rn = op1!(instruction);
-                let rm = op2!(instruction);
-
-                let old = self.reg(rm)?;
-
-                // TODO: Update STATUS
-
-                match 42_u8 {
-                    12 => println!("12"),
-                    42 => println!("42"),
-                    n => println!("{}", n),
+        // STORE is the first non-ALU operation
+        if operation < OP_STORE {
+            self.process_alu(instruction)?;
+        } else {
+            match operation {
+                OP_LOAD => {
+                    let address = op1!(instruction);
+                    let target = op2!(instruction);
+                    self.set_reg(target, self.mem(address))?;
                 }
+                OP_LOAD_I => {
+                    let target = op2!(instruction);
+                    let address = self.reg(COUNTER)?;
 
-                self.set_reg(
-                    rm,
-                    match rn {
-                        NOT => !old,
-                        #[allow(clippy::cast_sign_loss)]
-                        #[allow(clippy::cast_possible_wrap)]
-                        NEG => -(old as i8) as u8,
-                        INC => old + 1,
-                        DEC => old - 1,
-                        n => panic!("impossible {}", n),
-                    },
-                )?;
-            }
-            SHIFT => {
-                let mode = op1!(instruction);
-                let rn = op2!(instruction);
+                    self.advanace_counter()?;
 
-                let old = self.reg(rn)?;
+                    self.set_reg(target, self.mem(address))?;
+                }
+                OP_STORE => {
+                    let address = op1!(instruction);
+                    let source = op2!(instruction);
 
-                // TODO: Update STATUS
-                self.set_reg(
-                    rn,
+                    self.set_mem(address, self.reg(source)?);
+                }
+                OP_STACK => {
+                    let mode = op1!(instruction);
+                    let rn = op2!(instruction);
+                    let sp = self.reg(SP)?;
+
                     match mode {
-                        SHLA => old << 1,
-                        SHRA => old >> 1,
-                        ROL => old.rotate_left(1),
-                        n => panic!("wat {}", n),
-                    },
-                )?;
-            }
-            STACK => {
-                let mode = op1!(instruction);
-                let rn = op2!(instruction);
-                let sp = self.reg(SP)?;
-
-                match mode {
-                    PUSH => {
-                        sp += 1;
-                        self.set_reg(sp, rn);
-                    }
-                    POP => {
-                        self.set_reg(rn, self.reg(sp)?)?;
-                        sp -= 1;
+                        PUSH => {
+                            self.set_reg(SP, sp + 1)?;
+                            self.set_reg(sp + 1, rn)?;
+                        }
+                        POP => {
+                            self.set_reg(SP, sp - 1)?;
+                            self.set_reg(rn, self.reg(sp)?)?;
+                        }
+                        _ => {
+                            return Err(Error::new(
+                                format!("0x{:X} isn't an instruction", instruction),
+                                None,
+                            ))
+                        }
                     }
                 }
-
-                self.set_reg(SP, sp)?;
+                _ => return Err(Error::new(String::from("Unknown instruction"), None)),
             }
-            _ => return Err(Error::new(String::from("Unknown instruction"), None)),
         }
         Ok(true)
     }
