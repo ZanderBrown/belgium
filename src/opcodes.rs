@@ -44,6 +44,14 @@ pub const ROL: u8 = 0b0000_1100;
 // Variants of `STACK`
 pub const PUSH: u8 = 0b0000_0000;
 pub const POP: u8 = 0b0000_0100;
+pub const LDSA: u8 = 0b0000_1000;
+pub const ADDSP_SETSP_PUSHALL_POPALL: u8 = 0b0000_1100;
+
+// Variants within variants
+pub const ADDSP: u8 = 0b0000_0000;
+pub const SETSP: u8 = 0b0000_0001;
+pub const PUSHALL: u8 = 0b0000_0010;
+pub const POPALL: u8 = 0b0000_0011;
 
 #[macro_export]
 macro_rules! op1 {

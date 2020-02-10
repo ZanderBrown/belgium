@@ -147,7 +147,7 @@ fn main() {
 
                 if matches.opt_present("f") {
                     for (i, v) in machine.iter_mem() {
-                        println!("0x{:04X}: 0x{:08X} {:10}", i, v, v);
+                        println!("0x{:02X}: 0x{:02X} ({:4}, {:3})", i, v, v as i8, v);
                     }
                 }
 

@@ -2,7 +2,10 @@ use crate::alu::ALU;
 use crate::op1;
 use crate::op2;
 use crate::opcodes::HALT;
-use crate::opcodes::{OPERATION, OP_LOAD, OP_LOAD_I, OP_STACK, OP_STORE, POP, PUSH};
+use crate::opcodes::{
+    ADDSP, ADDSP_SETSP_PUSHALL_POPALL, LDSA, OPERATION, OP_LOAD, OP_LOAD_I, OP_STACK, OP_STORE,
+    POP, POPALL, PUSH, PUSHALL, SETSP,
+};
 use crate::stream::Error;
 use std::rc::Weak;
 
@@ -42,7 +45,7 @@ impl Machine {
     pub fn new() -> Self {
         Self {
             memory: [0; MEM_SIZE],
-            registers: [0; REG_SIZE as usize],
+            registers: [0, 0, 0, 0, 0, 0, 0],
             mem_listeners: Vec::new(),
             reg_listeners: Vec::new(),
         }
@@ -142,8 +145,6 @@ impl Machine {
         let instruction = self.mem(self.reg(COUNTER)?);
         let operation = instruction & OPERATION;
 
-        self.advanace_counter()?;
-
         // HALT is a special case
         if instruction == HALT {
             return Ok(false);
@@ -157,13 +158,13 @@ impl Machine {
                 OP_LOAD => {
                     let address = op1!(instruction);
                     let target = op2!(instruction);
-                    self.set_reg(target, self.mem(address))?;
+                    self.set_reg(target, self.mem(self.reg(address)?))?;
                 }
                 OP_LOAD_I => {
+                    self.advanace_counter()?;
+
                     let target = op2!(instruction);
                     let address = self.reg(COUNTER)?;
-
-                    self.advanace_counter()?;
 
                     self.set_reg(target, self.mem(address))?;
                 }
@@ -174,19 +175,62 @@ impl Machine {
                     self.set_mem(address, self.reg(source)?);
                 }
                 OP_STACK => {
-                    let mode = op1!(instruction);
                     let rn = op2!(instruction);
                     let sp = self.reg(SP)?;
 
-                    match mode {
+                    match instruction & 0b0000_1100 {
                         PUSH => {
-                            self.set_reg(SP, sp + 1)?;
-                            self.set_reg(sp + 1, rn)?;
+                            let sp = sp.wrapping_sub(1);
+                            self.set_reg(SP, sp)?;
+                            self.set_mem(sp, self.reg(rn)?);
                         }
                         POP => {
-                            self.set_reg(SP, sp - 1)?;
-                            self.set_reg(rn, self.reg(sp)?)?;
+                            self.set_reg(rn, self.mem(sp))?;
+                            self.set_reg(SP, sp.wrapping_add(1))?;
                         }
+                        LDSA => {
+                            self.advanace_counter()?;
+
+                            let offset = self.mem(self.reg(COUNTER)?);
+
+                            self.set_reg(rn, sp.wrapping_add(offset))?;
+                        }
+                        ADDSP_SETSP_PUSHALL_POPALL => match instruction & 0b0000_0011 {
+                            ADDSP => {
+                                self.advanace_counter()?;
+
+                                let offset = self.mem(self.reg(COUNTER)?);
+
+                                self.set_reg(SP, sp.wrapping_add (offset))?;
+                            }
+                            SETSP => {
+                                self.advanace_counter()?;
+
+                                self.set_reg(SP, self.mem(self.reg(COUNTER)?))?;
+                            }
+                            PUSHALL => {
+                                let mut sp = sp;
+                                for i in (0..=3).rev() {
+                                    sp = sp.wrapping_sub(1);
+                                    self.set_reg(SP, sp)?;
+                                    self.set_mem(sp, self.reg(i)?);
+                                }
+                            }
+                            POPALL => {
+                                let mut sp = sp;
+                                for i in 0..4 {
+                                    self.set_reg(i, self.mem(sp))?;
+                                    sp = sp.wrapping_add(1);
+                                    self.set_reg(SP, sp)?;
+                                }
+                            }
+                            _ => {
+                                return Err(Error::new(
+                                    format!("0x{:X} isn't an instruction", instruction),
+                                    None,
+                                ))
+                            }
+                        },
                         _ => {
                             return Err(Error::new(
                                 format!("0x{:X} isn't an instruction", instruction),
@@ -195,9 +239,12 @@ impl Machine {
                         }
                     }
                 }
-                _ => return Err(Error::new(String::from("Unknown instruction"), None)),
+                _ => return Err(Error::new(format!("Unknown instruction 0x{:X}", instruction), None)),
             }
         }
+
+        self.advanace_counter()?;
+
         Ok(true)
     }
 
@@ -206,6 +253,7 @@ impl Machine {
         MemIter {
             machine: Box::new(self),
             pos: 0,
+            done: false,
         }
     }
 }
@@ -213,17 +261,22 @@ impl Machine {
 pub struct MemIter<'a> {
     machine: Box<&'a Machine>,
     pos: u8,
+    done: bool,
 }
 
 impl<'a> Iterator for MemIter<'a> {
     type Item = (u8, u8);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos == 255 {
+        if self.done {
             None
         } else {
             let old_pos = self.pos;
-            self.pos += 1;
+            if old_pos == 255 {
+                self.done = true;
+            } else {
+                self.pos += 1;
+            }
             Some((old_pos, self.machine.mem(old_pos)))
         }
     }

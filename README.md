@@ -2,7 +2,7 @@
 
 ![belgium logo](logo.png)
 
-Belgium, an implementation of CdM-8.
+Belgium, an implementation of CdM-8 v4.
 
 Currently only implements a VM supporting a subset of opcodes
 
