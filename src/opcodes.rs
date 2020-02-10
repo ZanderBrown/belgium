@@ -23,7 +23,7 @@ pub const OP_LOAD_I: u8 = 0b1101_0000;
 // Flow
 pub const OP_BRANCH: u8 = 0b1110_0000;
 
-// ???
+// Load Constant
 pub const OP_LOAD_C: u8 = 0b1111_0000;
 
 // Magic instruction for stopping the clock
@@ -52,6 +52,24 @@ pub const ADDSP: u8 = 0b0000_0000;
 pub const SETSP: u8 = 0b0000_0001;
 pub const PUSHALL: u8 = 0b0000_0010;
 pub const POPALL: u8 = 0b0000_0011;
+
+// Variants fo `OP_BRANCH`
+pub const BEQ_BZ: u8 = 0b0000_0000;
+pub const BNE_BNZ: u8 = 0b0000_0001;
+pub const BHS_BCS: u8 = 0b0000_0010;
+pub const BLO_BCC: u8 = 0b0000_0011;
+pub const BMI: u8 = 0b0000_0100;
+pub const BPL: u8 = 0b0000_0101;
+pub const BVS: u8 = 0b0000_0110;
+pub const BVC: u8 = 0b0000_0111;
+pub const BHI: u8 = 0b0000_1000;
+pub const BLS: u8 = 0b0000_1001;
+pub const BGE: u8 = 0b0000_1010;
+pub const BLT: u8 = 0b0000_1011;
+pub const BGT: u8 = 0b0000_1100;
+pub const BLE: u8 = 0b0000_1101;
+pub const BR: u8 = 0b0000_1110;
+pub const NOP: u8 = 0b0000_1111;
 
 #[macro_export]
 macro_rules! op1 {

@@ -34,7 +34,7 @@ impl ALU for Machine {
 
         match op {
             OP_MOVE => {
-                self.handle_status(false, false, reg_right)?;
+                self.handle_status(false, false, val_left)?;
                 self.set_reg(reg_right, val_left)?;
             }
             OP_ADD | OP_ADDC | OP_SUB | OP_CMP => {

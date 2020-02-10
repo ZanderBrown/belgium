@@ -3,8 +3,9 @@ use crate::op1;
 use crate::op2;
 use crate::opcodes::HALT;
 use crate::opcodes::{
-    ADDSP, ADDSP_SETSP_PUSHALL_POPALL, LDSA, OPERATION, OP_LOAD, OP_LOAD_I, OP_STACK, OP_STORE,
-    POP, POPALL, PUSH, PUSHALL, SETSP,
+    ADDSP, ADDSP_SETSP_PUSHALL_POPALL, BEQ_BZ, BGE, BGT, BHI, BHS_BCS, BLE, BLO_BCC, BLS, BLT, BMI,
+    BNE_BNZ, BPL, BR, BVC, BVS, LDSA, NOP, OPERATION, OP_BRANCH, OP_LOAD, OP_LOAD_C, OP_LOAD_I,
+    OP_STACK, OP_STORE, POP, POPALL, PUSH, PUSHALL, SETSP,
 };
 use crate::stream::Error;
 use std::rc::Weak;
@@ -141,6 +142,7 @@ impl Machine {
     /// # Errors
     ///
     /// Will return `Err` on a malformed instruction
+    #[allow(clippy::too_many_lines)]
     pub fn step(&mut self) -> Result<bool, Error> {
         let instruction = self.mem(self.reg(COUNTER)?);
         let operation = instruction & OPERATION;
@@ -201,7 +203,7 @@ impl Machine {
 
                                 let offset = self.mem(self.reg(COUNTER)?);
 
-                                self.set_reg(SP, sp.wrapping_add (offset))?;
+                                self.set_reg(SP, sp.wrapping_add(offset))?;
                             }
                             SETSP => {
                                 self.advanace_counter()?;
@@ -239,7 +241,67 @@ impl Machine {
                         }
                     }
                 }
-                _ => return Err(Error::new(format!("Unknown instruction 0x{:X}", instruction), None)),
+                OP_BRANCH => {
+                    self.advanace_counter()?;
+
+                    let address = self.mem(self.reg(COUNTER)?);
+
+                    let jump = match instruction & 0b0000_1111 {
+                        BEQ_BZ => self.z(),
+                        BNE_BNZ => !self.z(),
+                        BHS_BCS => self.c(),
+                        BLO_BCC => !self.c(),
+                        BMI => self.n(),
+                        BPL => !self.n(),
+                        BVS => self.v(),
+                        BVC => !self.v(),
+                        BHI => self.c() && !self.z(),
+                        // FIXME: Feels odd this is the same as BLO_BCC
+                        BLS => !self.c(),
+                        BGE => {
+                            (self.v() && self.n())
+                                || (!self.v() && !self.z() && !self.n())
+                                || self.z()
+                        }
+                        BLT => (!self.v() && self.n()) || (self.v() && !self.z() && !self.n()),
+                        BGT => (self.v() && self.n()) || (!self.v() && !self.z() && !self.n()),
+                        BLE => {
+                            self.z()
+                                || (!self.v() && self.n())
+                                || (self.v() && !self.z() && !self.n())
+                        }
+                        BR => true,
+                        NOP => false,
+                        _ => {
+                            return Err(Error::new(
+                                format!("Unknown instruction 0x{:X}", instruction),
+                                None,
+                            ))
+                        }
+                    };
+
+                    if jump {
+                        // FIXME: -1 to absorb the advanace_counter
+                        self.set_reg(COUNTER, address.wrapping_sub(1))?;
+                    }
+                }
+                OP_LOAD_C => {
+                    // TODO: This is kinda wrong
+                    let address = op1!(instruction);
+                    let target = op2!(instruction);
+                    #[allow(unused_must_use)]
+                    #[allow(clippy::no_effect)]
+                    {
+                        1 + 1; // Just to shut rustc up about OP_LOAD
+                    }
+                    self.set_reg(target, self.mem(self.reg(address)?))?;
+                }
+                _ => {
+                    return Err(Error::new(
+                        format!("Unknown instruction 0x{:X}", instruction),
+                        None,
+                    ))
+                }
             }
         }
 
