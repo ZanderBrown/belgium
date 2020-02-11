@@ -1,7 +1,7 @@
 use belgium::ChangeEvent;
 use belgium::Machine;
 use belgium::Observer;
-use belgium::{COUNTER, SP, STATUS};
+use belgium::{Response, COUNTER, SP, STATUS};
 
 use std::env;
 use std::fs::read;
@@ -133,11 +133,17 @@ fn main() {
 
                 loop {
                     match machine.step() {
-                        Ok(res) => {
-                            if !res {
+                        Ok(res) => match res {
+                            Response::Halt => {
+                                println!("stop on halt");
                                 break;
                             }
-                        }
+                            Response::Wait => {
+                                println!("stop on wait");
+                                break;
+                            }
+                            _ => continue,
+                        },
                         Err(err) => {
                             println!("{}", err);
                             break;

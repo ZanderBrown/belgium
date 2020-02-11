@@ -18,7 +18,7 @@ pub const OP_SHIFT: u8 = 0b1001_0000;
 pub const OP_STORE: u8 = 0b1010_0000;
 pub const OP_LOAD: u8 = 0b1011_0000;
 pub const OP_STACK: u8 = 0b1100_0000;
-pub const OP_LOAD_I: u8 = 0b1101_0000;
+pub const LDI_INTERRUPT: u8 = 0b1101_0000;
 
 // Flow
 pub const OP_BRANCH: u8 = 0b1110_0000;
@@ -26,14 +26,26 @@ pub const OP_BRANCH: u8 = 0b1110_0000;
 // Load Constant
 pub const OP_LOAD_C: u8 = 0b1111_0000;
 
-// Magic instruction for stopping the clock
-pub const HALT: u8 = 0b1101_0100;
-
 // Variants of `NOT_NEG_INC_DEC`
 pub const NOT: u8 = 0b0000_0000;
 pub const NEG: u8 = 0b0000_0100;
 pub const DEC: u8 = 0b0000_1000;
 pub const INC: u8 = 0b0000_1100;
+
+// Variants of `LDI_INTERRUPT`
+pub const OP_LDI_0: u8 = 0b0000_0000;
+pub const OP_LDI_1: u8 = 0b0000_0001;
+pub const OP_LDI_2: u8 = 0b0000_0010;
+pub const OP_LDI_3: u8 = 0b0000_0011;
+pub const OP_HALT: u8 = 0b0000_0100;
+pub const OP_WAIT: u8 = 0b0000_0101;
+pub const OP_JSR: u8 = 0b0000_0110;
+pub const OP_RTS: u8 = 0b0000_0111;
+pub const OP_IOI: u8 = 0b0000_1000;
+pub const OP_RTI: u8 = 0b0000_1001;
+pub const OP_CRC: u8 = 0b0000_1010;
+pub const OP_OSIX: u8 = 0b0000_1011;
+pub const OP_RAND: u8 = 0b0000_1111;
 
 // Variants of `SHIFT`
 pub const SHR: u8 = 0b0000_0000;

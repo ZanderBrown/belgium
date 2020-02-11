@@ -1,10 +1,11 @@
 use crate::alu::ALU;
 use crate::op1;
 use crate::op2;
-use crate::opcodes::HALT;
 use crate::opcodes::{
-    BEQ_BZ, BGE, BGT, BHI, BHS_BCS, BLE, BLO_BCC, BLS, BLT, BMI, BNE_BNZ, BPL, BR, BVC, BVS, NOP,
-    OPERATION, OP_BRANCH, OP_LOAD, OP_LOAD_C, OP_LOAD_I, OP_STACK, OP_STORE,
+    BEQ_BZ, BGE, BGT, BHI, BHS_BCS, BLE, BLO_BCC, BLS, BLT, BMI, BNE_BNZ, BPL, BR, BVC, BVS,
+    LDI_INTERRUPT, NOP, OPERATION, OP_BRANCH, OP_CRC, OP_HALT, OP_IOI, OP_JSR, OP_LDI_0, OP_LDI_1,
+    OP_LDI_2, OP_LDI_3, OP_LOAD, OP_LOAD_C, OP_OSIX, OP_RAND, OP_RTI, OP_RTS, OP_STACK, OP_STORE,
+    OP_WAIT,
 };
 use crate::stream::Error;
 use std::rc::Weak;
@@ -16,6 +17,12 @@ pub const REG_SIZE: u8 = 4 + 3;
 pub const COUNTER: u8 = 4;
 pub const STATUS: u8 = 5;
 pub const SP: u8 = 6;
+
+pub enum Response {
+    Normal,
+    Halt,
+    Wait,
+}
 
 #[derive(Clone)]
 pub struct ChangeEvent {
@@ -141,14 +148,9 @@ impl Machine {
     /// # Errors
     ///
     /// Will return `Err` on a malformed instruction
-    pub fn step(&mut self) -> Result<bool, Error> {
+    pub fn step(&mut self) -> Result<Response, Error> {
         let instruction = self.mem(self.reg(COUNTER)?);
         let operation = instruction & OPERATION;
-
-        // HALT is a special case
-        if instruction == HALT {
-            return Ok(false);
-        }
 
         // STORE is the first non-ALU operation
         if operation < OP_STORE {
@@ -160,13 +162,56 @@ impl Machine {
                     let target = op2!(instruction);
                     self.set_reg(target, self.mem(self.reg(address)?))?;
                 }
-                OP_LOAD_I => {
-                    self.advanace_counter()?;
+                LDI_INTERRUPT => {
+                    match instruction & 0b0000_1111 {
+                        OP_LDI_0 | OP_LDI_1 | OP_LDI_2 | OP_LDI_3 => {
+                            self.advanace_counter()?;
 
-                    let target = op2!(instruction);
-                    let address = self.reg(COUNTER)?;
+                            let target = op2!(instruction);
+                            let addr = self.reg(COUNTER)?;
 
-                    self.set_reg(target, self.mem(address))?;
+                            self.set_reg(target, self.mem(addr))?;
+                        }
+                        OP_HALT => return Ok(Response::Halt),
+                        OP_WAIT => return Ok(Response::Wait),
+                        OP_JSR => {
+                            self.advanace_counter()?;
+
+                            let address = self.mem(self.reg(COUNTER)?);
+
+                            // Push "here" to the stack
+                            let sp = self.reg(SP)?.wrapping_sub(1);
+
+                            self.set_reg(SP, sp)?;
+                            self.set_mem(sp, self.reg(COUNTER)?);
+
+                            // FIXME: counteract the advanace_counter at the end
+                            self.set_reg(COUNTER, address.wrapping_sub(1))?;
+                        }
+                        OP_RTS => {
+                            // Pop the return address
+                            let sp = self.reg(SP)?;
+                            let address = self.mem(sp);
+
+                            self.set_reg(SP, sp.wrapping_add(1))?;
+
+                            // FIXME: counteract the advanace_counter at the end
+                            self.set_reg(COUNTER, address.wrapping_sub(1))?;
+                        }
+                        OP_IOI => {}
+                        OP_RTI => {}
+                        OP_CRC => {}
+                        OP_OSIX => {}
+                        OP_RAND => {
+                            // Yikes now we need the rand crate
+                        }
+                        _ => {
+                            return Err(Error::new(
+                                format!("Unknown instruction 0x{:X}", instruction),
+                                None,
+                            ))
+                        }
+                    }
                 }
                 OP_STORE => {
                     let address = op1!(instruction);
@@ -175,49 +220,7 @@ impl Machine {
                     self.set_mem(address, self.reg(source)?);
                 }
                 OP_STACK => self.handle_stack(instruction)?,
-                OP_BRANCH => {
-                    self.advanace_counter()?;
-
-                    let address = self.mem(self.reg(COUNTER)?);
-
-                    let jump = match instruction & 0b0000_1111 {
-                        BEQ_BZ => self.z(),
-                        BNE_BNZ => !self.z(),
-                        BHS_BCS => self.c(),
-                        BLO_BCC => !self.c(),
-                        BMI => self.n(),
-                        BPL => !self.n(),
-                        BVS => self.v(),
-                        BVC => !self.v(),
-                        BHI => self.c() && !self.z(),
-                        BLS => !self.c() || self.z(),
-                        BGE => {
-                            (self.v() && self.n())
-                                || (!self.v() && !self.z() && !self.n())
-                                || self.z()
-                        }
-                        BLT => (!self.v() && self.n()) || (self.v() && !self.z() && !self.n()),
-                        BGT => (self.v() && self.n()) || (!self.v() && !self.z() && !self.n()),
-                        BLE => {
-                            self.z()
-                                || (!self.v() && self.n())
-                                || (self.v() && !self.z() && !self.n())
-                        }
-                        BR => true,
-                        NOP => false,
-                        _ => {
-                            return Err(Error::new(
-                                format!("Unknown instruction 0x{:X}", instruction),
-                                None,
-                            ))
-                        }
-                    };
-
-                    if jump {
-                        // FIXME: -1 to absorb the advanace_counter
-                        self.set_reg(COUNTER, address.wrapping_sub(1))?;
-                    }
-                }
+                OP_BRANCH => self.handle_branch(instruction)?,
                 OP_LOAD_C => {
                     // TODO: This is kinda wrong
                     let address = op1!(instruction);
@@ -240,7 +243,45 @@ impl Machine {
 
         self.advanace_counter()?;
 
-        Ok(true)
+        Ok(Response::Normal)
+    }
+
+    fn handle_branch(&mut self, instruction: u8) -> Result<(), Error> {
+        self.advanace_counter()?;
+
+        let address = self.mem(self.reg(COUNTER)?);
+
+        let jump = match instruction & 0b0000_1111 {
+            BEQ_BZ => self.z(),
+            BNE_BNZ => !self.z(),
+            BHS_BCS => self.c(),
+            BLO_BCC => !self.c(),
+            BMI => self.n(),
+            BPL => !self.n(),
+            BVS => self.v(),
+            BVC => !self.v(),
+            BHI => self.c() && !self.z(),
+            BLS => !self.c() || self.z(),
+            BGE => (self.v() && self.n()) || (!self.v() && !self.z() && !self.n()) || self.z(),
+            BLT => (!self.v() && self.n()) || (self.v() && !self.z() && !self.n()),
+            BGT => (self.v() && self.n()) || (!self.v() && !self.z() && !self.n()),
+            BLE => self.z() || (!self.v() && self.n()) || (self.v() && !self.z() && !self.n()),
+            BR => true,
+            NOP => false,
+            _ => {
+                return Err(Error::new(
+                    format!("Unknown instruction 0x{:X}", instruction),
+                    None,
+                ))
+            }
+        };
+
+        if jump {
+            // FIXME: -1 to absorb the advanace_counter
+            self.set_reg(COUNTER, address.wrapping_sub(1))?;
+        }
+
+        Ok(())
     }
 
     #[must_use]
