@@ -3,9 +3,8 @@ use crate::op1;
 use crate::op2;
 use crate::opcodes::HALT;
 use crate::opcodes::{
-    ADDSP, ADDSP_SETSP_PUSHALL_POPALL, BEQ_BZ, BGE, BGT, BHI, BHS_BCS, BLE, BLO_BCC, BLS, BLT, BMI,
-    BNE_BNZ, BPL, BR, BVC, BVS, LDSA, NOP, OPERATION, OP_BRANCH, OP_LOAD, OP_LOAD_C, OP_LOAD_I,
-    OP_STACK, OP_STORE, POP, POPALL, PUSH, PUSHALL, SETSP,
+    BEQ_BZ, BGE, BGT, BHI, BHS_BCS, BLE, BLO_BCC, BLS, BLT, BMI, BNE_BNZ, BPL, BR, BVC, BVS, NOP,
+    OPERATION, OP_BRANCH, OP_LOAD, OP_LOAD_C, OP_LOAD_I, OP_STACK, OP_STORE,
 };
 use crate::stream::Error;
 use std::rc::Weak;
@@ -104,7 +103,7 @@ impl Machine {
         }
     }
 
-    fn advanace_counter(&mut self) -> Result<(), Error> {
+    pub(crate) fn advanace_counter(&mut self) -> Result<(), Error> {
         let current = self.reg(COUNTER)?;
         self.set_reg(COUNTER, current.wrapping_add(1))
     }
@@ -142,7 +141,6 @@ impl Machine {
     /// # Errors
     ///
     /// Will return `Err` on a malformed instruction
-    #[allow(clippy::too_many_lines)]
     pub fn step(&mut self) -> Result<bool, Error> {
         let instruction = self.mem(self.reg(COUNTER)?);
         let operation = instruction & OPERATION;
@@ -176,71 +174,7 @@ impl Machine {
 
                     self.set_mem(address, self.reg(source)?);
                 }
-                OP_STACK => {
-                    let rn = op2!(instruction);
-                    let sp = self.reg(SP)?;
-
-                    match instruction & 0b0000_1100 {
-                        PUSH => {
-                            let sp = sp.wrapping_sub(1);
-                            self.set_reg(SP, sp)?;
-                            self.set_mem(sp, self.reg(rn)?);
-                        }
-                        POP => {
-                            self.set_reg(rn, self.mem(sp))?;
-                            self.set_reg(SP, sp.wrapping_add(1))?;
-                        }
-                        LDSA => {
-                            self.advanace_counter()?;
-
-                            let offset = self.mem(self.reg(COUNTER)?);
-
-                            self.set_reg(rn, sp.wrapping_add(offset))?;
-                        }
-                        ADDSP_SETSP_PUSHALL_POPALL => match instruction & 0b0000_0011 {
-                            ADDSP => {
-                                self.advanace_counter()?;
-
-                                let offset = self.mem(self.reg(COUNTER)?);
-
-                                self.set_reg(SP, sp.wrapping_add(offset))?;
-                            }
-                            SETSP => {
-                                self.advanace_counter()?;
-
-                                self.set_reg(SP, self.mem(self.reg(COUNTER)?))?;
-                            }
-                            PUSHALL => {
-                                let mut sp = sp;
-                                for i in (0..=3).rev() {
-                                    sp = sp.wrapping_sub(1);
-                                    self.set_reg(SP, sp)?;
-                                    self.set_mem(sp, self.reg(i)?);
-                                }
-                            }
-                            POPALL => {
-                                let mut sp = sp;
-                                for i in 0..4 {
-                                    self.set_reg(i, self.mem(sp))?;
-                                    sp = sp.wrapping_add(1);
-                                    self.set_reg(SP, sp)?;
-                                }
-                            }
-                            _ => {
-                                return Err(Error::new(
-                                    format!("0x{:X} isn't an instruction", instruction),
-                                    None,
-                                ))
-                            }
-                        },
-                        _ => {
-                            return Err(Error::new(
-                                format!("0x{:X} isn't an instruction", instruction),
-                                None,
-                            ))
-                        }
-                    }
-                }
+                OP_STACK => self.handle_stack(instruction)?,
                 OP_BRANCH => {
                     self.advanace_counter()?;
 
@@ -256,8 +190,7 @@ impl Machine {
                         BVS => self.v(),
                         BVC => !self.v(),
                         BHI => self.c() && !self.z(),
-                        // FIXME: Feels odd this is the same as BLO_BCC
-                        BLS => !self.c(),
+                        BLS => !self.c() || self.z(),
                         BGE => {
                             (self.v() && self.n())
                                 || (!self.v() && !self.z() && !self.n())

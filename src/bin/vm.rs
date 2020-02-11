@@ -121,8 +121,8 @@ fn main() {
                     machine.add_mem_observer(Rc::downgrade(&rc));
                 }
 
-                for i in 0..program.len() {
-                    machine.set_mem(i as u8, program[i]);
+                for (i, b) in program.iter().enumerate() {
+                    machine.set_mem(i as u8, *b);
                 }
 
                 if matches.opt_present("i") {

@@ -6,6 +6,7 @@ mod machine;
 // mod parse;
 mod alu;
 mod opcodes;
+mod stack;
 mod stream;
 
 // Make enough public to easily run programs
