@@ -97,7 +97,18 @@ impl ALU for Machine {
             OP_SHIFT => {
                 let (result, carry, over) = match instruction & 0b0000_1100 {
                     // To the right, carry is true for odd numbers
-                    SHR => (val_right >> 1, val_right % 2 > 0, false),
+                    SHR => (
+                        {
+                            let result = val_right >> 1;
+                            if self.c() {
+                                result | 0b1000_0000
+                            } else {
+                                result
+                            }
+                        },
+                        val_right % 2 > 0,
+                        false,
+                    ),
                     SHRA => (val_right / 2, val_right % 2 > 0, false),
                     // To the left
                     SHLA => {

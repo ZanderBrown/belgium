@@ -183,7 +183,7 @@ impl Machine {
                             let sp = self.reg(SP)?.wrapping_sub(1);
 
                             self.set_reg(SP, sp)?;
-                            self.set_mem(sp, self.reg(COUNTER)?);
+                            self.set_mem(sp, self.reg(COUNTER)?.wrapping_add(1));
 
                             // FIXME: counteract the advanace_counter at the end
                             self.set_reg(COUNTER, address.wrapping_sub(1))?;
@@ -193,14 +193,19 @@ impl Machine {
                             let sp = self.reg(SP)?;
                             let address = self.mem(sp);
 
-                            self.set_reg(SP, sp.wrapping_add(1))?;
-
                             // FIXME: counteract the advanace_counter at the end
                             self.set_reg(COUNTER, address.wrapping_sub(1))?;
+
+                            self.set_reg(SP, sp.wrapping_add(1))?;
                         }
                         OP_IOI => {}
                         OP_RTI => {}
-                        OP_CRC => {}
+                        OP_CRC => {
+                            let temp = self.reg(COUNTER)?.wrapping_add(1);
+                            let sp = self.reg(SP)?;
+                            self.set_reg(COUNTER, self.mem(sp).wrapping_sub(1))?;
+                            self.set_mem(sp, temp);
+                        }
                         OP_OSIX => {}
                         OP_RAND => {
                             // Yikes now we need the rand crate
