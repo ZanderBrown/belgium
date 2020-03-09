@@ -133,7 +133,7 @@ fn main() {
 
                 loop {
                     match machine.step(None) {
-                        Ok(res) => match res {
+                        Ok (res) => match res {
                             Response::Halt => {
                                 println!("stop on halt");
                                 break;
@@ -143,10 +143,17 @@ fn main() {
                                 break;
                             }
                             _ => continue,
-                        },
-                        Err(err) => {
-                            println!("{}", err);
-                            break;
+                        }
+                        Err(res) => match res {
+                            Response::UnknownInstruction => {
+                                println!("Bad Instruction");
+                                break;
+                            }
+                            Response::BadRegister => {
+                                println!("Bad Register");
+                                break;
+                            }
+                            _ => continue,
                         }
                     }
                 }

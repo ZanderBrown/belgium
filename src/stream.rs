@@ -1,23 +1,18 @@
 use std::error;
 use std::fmt;
 
-/// Line, Column
-#[derive(Debug)]
-pub struct Point(usize, usize);
+use crate::token::{Range, Token, Type};
+use crate::token::Point;
 
 #[derive(Debug)]
 pub struct Error {
     message: String,
-    point: Option<Point>,
+    at: Range,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Error: {}", self.message)?;
-        if let Some(point) = &self.point {
-            write!(f, " [{}:{}]", point.0, point.1)?;
-        }
-        Ok(())
+        write!(f, "{} {}", self.message, self.at)
     }
 }
 
@@ -29,8 +24,44 @@ impl error::Error for Error {
 
 impl Error {
     #[must_use]
-    pub fn new(message: String, point: Option<Point>) -> Self {
-        Self { message, point }
+    pub fn new(message: String, at: Range) -> Self {
+        Self { message, at }
+    }
+
+    #[must_use]
+    pub fn at(&self) -> Range {
+        self.at
+    }
+
+    pub fn print(&self, src: Option<&Input>) {
+        if let Some(src) = src {
+            let line = format!("{}", self.at.start().line());
+            let lines: Vec<&str> = src.input.split('\n').collect();
+            if lines.len() >= self.at.start().line() {
+                eprintln!("{} ❘{}", line, lines[self.at.start().line() - 1]);
+            } else {
+                eprintln!("{} ❘ [err]", line);
+            }
+            eprintln!(
+                "{:idt$} ❘{:pad$}{:↑>num$}",
+                " ",
+                "",
+                "↑",
+                idt = line.len(),
+                pad = self.at.start().column(),
+                num = self.at.end().column() - self.at.start().column()
+            );
+            eprintln!(
+                "{:idt$} ❘{:pad$}{}",
+                " ",
+                " ",
+                self.message,
+                idt = line.len(),
+                pad = self.at.start().column()
+            );
+        } else {
+            eprintln!("{}", self.message);
+        }
     }
 }
 
@@ -39,59 +70,105 @@ pub struct Input {
     line: usize,
     col: usize,
     pos: usize,
+    current: Option<Token>,
 }
 
 impl Input {
     fn forward(&mut self) {
-        // If further chars are avalible
         if let Some(ch) = self.input.chars().nth(self.pos) {
-            // Advance the position
             self.pos += 1;
-            // If the charecter is a newline
             if ch == '\n' {
-                // Record the new line position
                 self.line += 1;
-                // Reset the column position
                 self.col = 0;
             } else {
-                // Still on the same line, advance the column
                 self.col += 1;
             }
         }
     }
 
-    /// Fetch the next character without consuming it
-    fn peek(&self) -> Option<char> {
-        // Return the character
+    fn peek_char(&self) -> Option<char> {
         self.input.chars().nth(self.pos)
     }
 
-    /// Generate a syntax error with msg at the current position
-    #[must_use]
-    pub fn error(&self, msg: String) -> Error {
-        Error::new(msg, Some(Point(self.line, self.col)))
+    fn here(&self) -> Point {
+        Point::new(self.line, self.col)
     }
 
     fn read(&mut self, matcher: &dyn Fn(char) -> bool) -> String {
-        // The string we will return
         let mut s = String::new();
-        // Read whilst charecters are still available
-        while let Some(ch) = self.peek() {
-            // If ch satisfies predicate
+        while let Some(ch) = self.peek_char() {
             if matcher(ch) {
-                // Consume ch appending it to the result
                 s.push(ch);
                 self.forward();
             } else {
-                // Break out of the while loop
                 break;
             }
         }
         s
     }
+
+    fn read_next(&mut self) -> Result<Token, Error> {
+        self.read(&|ch| ch.is_whitespace());
+        let start = self.here();
+        if let Some(ch) = self.peek_char() {
+            match ch {
+                'r' => {
+                    self.forward();
+                    if let Some(reg) = self.peek_char() {
+                        self.forward();
+                        match reg {
+                            '1' => Ok(Token::new(Type::Register(1), Range::new(start, self.here()))),
+                            '2' => Ok(Token::new(Type::Register(2), Range::new(start, self.here()))),
+                            '3' => Ok(Token::new(Type::Register(3), Range::new(start, self.here()))),
+                            '4' => Ok(Token::new(Type::Register(4), Range::new(start, self.here()))),
+                            _ => Err(Error::new(format!("Invalid register {}", reg), Range::new(start, self.here())))
+                        }
+                    } else {
+                        Err(Error::new("Unexpected end of file".to_string(), Range::new(start, self.here())))
+                    }
+                }
+                '"' => {
+                    let text = self.read(&|c| c != '"');
+                    self.forward();
+                    Ok(Token::new(Type::LiteralString(text), Range::new(start, self.here())))
+                }
+                ch if ch.is_alphabetic() => {
+                    let text = self.read(&|c| c.is_alphanumeric());
+                    Ok(Token::new(Type::Symbol(text), Range::new(start, self.here())))
+                }
+                ch => {
+                    self.forward();
+                    Err(Error::new(
+                        format!("Unknown {}", ch),
+                        Range::new(start, self.here()),
+                    ))
+                }
+            }
+        } else {
+            Ok(Token::new(Type::Eof, Range::new(start, self.here())))
+        }
+    }
+
+    /// # Errors
+    /// 
+    pub fn peek(&mut self) -> Result<Option<Token>, Error> {
+        if self.current.is_none() {
+            self.current = Some(self.read_next()?);
+        }
+        Ok(self.current.clone())
+    }
+
+    /// # Errors
+    /// 
+    pub fn consume(&mut self) -> Result<Token, Error> {
+        if let Some(tok) = self.current.take() {
+            Ok(tok)
+        } else {
+            self.read_next()
+        }
+    }
 }
 
-/// Allow casting String to Input
 impl From<String> for Input {
     fn from(input: String) -> Self {
         Self {
@@ -99,84 +176,7 @@ impl From<String> for Input {
             line: 1,
             col: 0,
             pos: 0,
-        }
-    }
-}
-
-const COMMANDS: [&str; 18] = [
-    "LDR", "STR", "ADD", "SUB", "MOV", "CMP", "B", "BEQ", "BNE", "BGT", "BLT", "AND", "ORR", "EOR",
-    "MVN", "LSL", "LSR", "HALT",
-];
-
-pub enum Token {
-    Command(String),
-    Number(u32),
-    Memory(u32),
-    Register(u32),
-    Label(String),
-    Comma,
-    Colon,
-}
-
-impl fmt::Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Token::Command(cmd) => write!(f, "{}", cmd),
-            Token::Number(num) => write!(f, "#{}", num),
-            Token::Memory(mem) => write!(f, "{}", mem),
-            Token::Register(reg) => write!(f, "R{}", reg),
-            Token::Label(lbl) => write!(f, "{}", lbl),
-            Token::Comma => write!(f, ","),
-            Token::Colon => write!(f, ":"),
-        }
-    }
-}
-
-impl Iterator for Input {
-    type Item = Result<Token, Error>;
-
-    fn next(&mut self) -> Option<Result<Token, Error>> {
-        self.read(&|ch| ch.is_whitespace());
-        if let Some(ch) = self.peek() {
-            if ch == 'R' {
-                self.forward();
-                let num = self.read(&|c| c.is_numeric());
-                match num.parse() {
-                    Ok(num) => Some(Ok(Token::Register(num))),
-                    Err(_) => Some(Err(self.error(format!("Bad number {}", num)))),
-                }
-            } else if ch.is_alphabetic() {
-                let text = self.read(&|c| c.is_alphanumeric());
-                if COMMANDS.contains(&text.as_str()) {
-                    Some(Ok(Token::Command(text)))
-                } else {
-                    Some(Ok(Token::Label(text)))
-                }
-            } else if ch.is_numeric() {
-                let num = self.read(&|c| c.is_numeric());
-                match num.parse() {
-                    Ok(num) => Some(Ok(Token::Memory(num))),
-                    Err(_) => Some(Err(self.error(format!("Bad number {}", num)))),
-                }
-            } else if ch == ',' {
-                self.forward();
-                Some(Ok(Token::Comma))
-            } else if ch == ':' {
-                self.forward();
-                Some(Ok(Token::Colon))
-            } else if ch == '#' {
-                self.forward();
-                let num = self.read(&|c| c.is_numeric());
-                match num.parse::<u32>() {
-                    Ok(num) => Some(Ok(Token::Number(num))),
-                    Err(_) => Some(Err(self.error(format!("Bad number {}", num)))),
-                }
-            } else {
-                self.forward();
-                Some(Err(self.error(format!("Unknown {}", ch))))
-            }
-        } else {
-            None
+            current: None,
         }
     }
 }

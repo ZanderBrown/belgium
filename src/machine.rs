@@ -7,7 +7,6 @@ use crate::opcodes::{
     OP_LDI_2, OP_LDI_3, OP_LOAD, OP_LOAD_C, OP_OSIX, OP_RAND, OP_RTI, OP_RTS, OP_STACK, OP_STORE,
     OP_WAIT,
 };
-use crate::stream::Error;
 use std::rc::Weak;
 
 pub const MEM_SIZE: usize = 256;
@@ -22,6 +21,8 @@ pub enum Response {
     Normal,
     Halt,
     Wait,
+    UnknownInstruction,
+    BadRegister
 }
 
 #[derive(Clone)]
@@ -89,9 +90,9 @@ impl Machine {
     /// # Errors
     ///
     /// Will return `Err` if `i` is an invalid register
-    pub fn set_reg(&mut self, i: u8, v: u8) -> Result<(), Error> {
+    pub fn set_reg(&mut self, i: u8, v: u8) -> Result<(), Response> {
         if i >= REG_SIZE {
-            Err(Error::new(format!("Invalid register {}", i), None))
+            Err(Response::BadRegister)
         } else {
             self.registers[i as usize] = v;
             Self::emit(&ChangeEvent { idx: i, val: v }, &self.reg_listeners);
@@ -102,15 +103,15 @@ impl Machine {
     /// # Errors
     ///
     /// Will return `Err` if `i` is an invalid register
-    pub fn reg(&self, i: u8) -> Result<u8, Error> {
+    pub fn reg(&self, i: u8) -> Result<u8, Response> {
         if i >= REG_SIZE {
-            Err(Error::new(format!("Invalid register {}", i), None))
+            Err(Response::BadRegister)
         } else {
             Ok(self.registers[i as usize])
         }
     }
 
-    pub(crate) fn advanace_counter(&mut self) -> Result<(), Error> {
+    pub(crate) fn advanace_counter(&mut self) -> Result<(), Response> {
         let current = self.reg(COUNTER)?;
         self.set_reg(COUNTER, current.wrapping_add(1))
     }
@@ -153,7 +154,7 @@ impl Machine {
     /// # Errors
     ///
     /// Will return `Err` on a malformed instruction
-    pub fn step(&mut self, interrupt: Option<u8>) -> Result<Response, Error> {
+    pub fn step(&mut self, interrupt: Option<u8>) -> Result<Response, Response> {
         let instruction = self.mem(self.reg(COUNTER)?);
         let operation = instruction & OPERATION;
 
@@ -210,10 +211,7 @@ impl Machine {
                             self.handle_interrupt(instruction, interrupt)?
                         }
                         _ => {
-                            return Err(Error::new(
-                                format!(" a Unknown instruction 0x{:X}", instruction),
-                                None,
-                            ))
+                            return Err(Response::UnknownInstruction)
                         }
                     }
                 }
@@ -237,10 +235,7 @@ impl Machine {
                     self.set_reg(target, self.mem(self.reg(address)?))?;
                 }
                 _ => {
-                    return Err(Error::new(
-                        format!(" b Unknown instruction 0x{:X}", instruction),
-                        None,
-                    ))
+                    return Err(Response::UnknownInstruction)
                 }
             }
         }
@@ -250,7 +245,7 @@ impl Machine {
         Ok(Response::Normal)
     }
 
-    fn handle_branch(&mut self, instruction: u8) -> Result<(), Error> {
+    fn handle_branch(&mut self, instruction: u8) -> Result<(), Response> {
         self.advanace_counter()?;
 
         let address = self.mem(self.reg(COUNTER)?);
@@ -273,10 +268,7 @@ impl Machine {
             BR => true,
             NOP => false,
             _ => {
-                return Err(Error::new(
-                    format!(" c Unknown instruction 0x{:X}", instruction),
-                    None,
-                ))
+                return Err(Response::UnknownInstruction)
             }
         };
 
@@ -288,7 +280,7 @@ impl Machine {
         Ok(())
     }
 
-    fn handle_interrupt(&mut self, instruction: u8, interrupt: Option<u8>) -> Result<(), Error> {
+    fn handle_interrupt(&mut self, instruction: u8, interrupt: Option<u8>) -> Result<(), Response> {
         match instruction & 0b0000_1111 {
             OP_IOI => {
                 if self.interrupt_enable() {
@@ -339,10 +331,7 @@ impl Machine {
                 self.set_reg(COUNTER, self.reg(COUNTER)?.wrapping_sub(1))?;
             }
             _ => {
-                return Err(Error::new(
-                    format!(" d Unknown instruction 0x{:X}", instruction),
-                    None,
-                ))
+                return Err(Response::UnknownInstruction)
             }
         }
 

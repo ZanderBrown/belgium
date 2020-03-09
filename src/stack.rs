@@ -1,10 +1,9 @@
-use crate::machine::{Machine, COUNTER, SP};
+use crate::machine::{Machine, COUNTER, SP, Response};
 use crate::op2;
 use crate::opcodes::{ADDSP, ADDSP_SETSP_PUSHALL_POPALL, LDSA, POP, POPALL, PUSH, PUSHALL, SETSP};
-use crate::stream::Error;
 
 impl Machine {
-    pub(crate) fn stack_push(&mut self, v: u8) -> Result<(), Error> {
+    pub(crate) fn stack_push(&mut self, v: u8) -> Result<(), Response> {
         let sp = self.reg(SP)?;
         let sp = sp.wrapping_sub(1);
         self.set_reg(SP, sp)?;
@@ -12,14 +11,14 @@ impl Machine {
         Ok(())
     }
 
-    pub(crate) fn stack_pop(&mut self) -> Result<u8, Error> {
+    pub(crate) fn stack_pop(&mut self) -> Result<u8, Response> {
         let sp = self.reg(SP)?;
         let v = self.mem(sp);
         self.set_reg(SP, sp.wrapping_add(1))?;
         Ok(v)
     }
 
-    pub(crate) fn handle_stack(&mut self, instruction: u8) -> Result<(), Error> {
+    pub(crate) fn handle_stack(&mut self, instruction: u8) -> Result<(), Response> {
         let rn = op2!(instruction);
         let sp = self.reg(SP)?;
 
@@ -68,17 +67,11 @@ impl Machine {
                     }
                 }
                 _ => {
-                    return Err(Error::new(
-                        format!("0x{:X} isn't an instruction", instruction),
-                        None,
-                    ))
+                    return Err(Response::UnknownInstruction)
                 }
             },
             _ => {
-                return Err(Error::new(
-                    format!("0x{:X} isn't an instruction", instruction),
-                    None,
-                ))
+                return Err(Response::UnknownInstruction)
             }
         }
 

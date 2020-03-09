@@ -1,13 +1,15 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
+#![allow(clippy::non_ascii_literal)]
 
 // mod assemble;
 mod machine;
-// mod parse;
+mod parse;
 mod alu;
 mod opcodes;
 mod stack;
 mod stream;
+mod token;
 
 // Make enough public to easily run programs
 // pub use crate::assemble::Assemble;

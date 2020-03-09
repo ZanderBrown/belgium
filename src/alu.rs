@@ -1,5 +1,4 @@
-use crate::machine::Machine;
-use crate::machine::STATUS;
+use crate::machine::{Machine,STATUS,Response};
 use crate::op1;
 use crate::op2;
 use crate::opcodes::OPERATION;
@@ -7,14 +6,13 @@ use crate::opcodes::{
     DEC, INC, NEG, NOT, OP_ADD, OP_ADDC, OP_AND, OP_CMP, OP_MOVE, OP_NOT_NEG_INC_DEC, OP_OR,
     OP_SHIFT, OP_SUB, OP_XOR, ROL, SHLA, SHR, SHRA,
 };
-use crate::stream::Error;
 
 pub trait ALU {
-    fn process_alu(&mut self, instruction: u8) -> Result<(), Error>;
+    fn process_alu(&mut self, instruction: u8) -> Result<(), Response>;
 }
 
 impl Machine {
-    fn handle_status(&mut self, carry: bool, overflow: bool, value: u8) -> Result<(), Error> {
+    fn handle_status(&mut self, carry: bool, overflow: bool, value: u8) -> Result<(), Response> {
         let c = if carry { 0b1000 } else { 0 };
         let v = if overflow { 0b0100 } else { 0 };
         let z = if value == 0 { 0b0010 } else { 0 };
@@ -25,7 +23,7 @@ impl Machine {
 }
 
 impl ALU for Machine {
-    fn process_alu(&mut self, instruction: u8) -> Result<(), Error> {
+    fn process_alu(&mut self, instruction: u8) -> Result<(), Response> {
         let op = instruction & OPERATION;
         let reg_left = op1!(instruction);
         let val_left = self.reg(reg_left)?;
@@ -80,10 +78,7 @@ impl ALU for Machine {
                     INC => val_right.overflowing_add(1),
                     DEC => val_right.overflowing_sub(1),
                     _ => {
-                        return Err(Error::new(
-                            format!("0x{:X} isn't an ALU instruction", instruction),
-                            None,
-                        ))
+                        return Err(Response::UnknownInstruction)
                     }
                 };
 
@@ -119,10 +114,7 @@ impl ALU for Machine {
                     }
                     ROL => (val_right.rotate_left(1), val_right & 0b1000_0000 > 0, false),
                     _ => {
-                        return Err(Error::new(
-                            format!("0x{:X} isn't an ALU instruction", instruction),
-                            None,
-                        ))
+                        return Err(Response::UnknownInstruction)
                     }
                 };
 
@@ -130,10 +122,7 @@ impl ALU for Machine {
                 self.set_reg(reg_right, result)?;
             }
             _ => {
-                return Err(Error::new(
-                    format!("0x{:X} isn't an ALU instruction", instruction),
-                    None,
-                ))
+                return Err(Response::UnknownInstruction)
             }
         }
 
