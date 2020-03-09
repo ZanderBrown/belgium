@@ -132,7 +132,7 @@ fn main() {
                 }
 
                 loop {
-                    match machine.step() {
+                    match machine.step(None) {
                         Ok(res) => match res {
                             Response::Halt => {
                                 println!("stop on halt");

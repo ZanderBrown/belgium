@@ -145,10 +145,15 @@ impl Machine {
         self.status() & 0b0000_0001 != 0
     }
 
+    #[must_use]
+    pub fn interrupt_enable(&self) -> bool {
+        self.status() & 0b1000_0000 != 0
+    }
+
     /// # Errors
     ///
     /// Will return `Err` on a malformed instruction
-    pub fn step(&mut self) -> Result<Response, Error> {
+    pub fn step(&mut self, interrupt: Option<u8>) -> Result<Response, Error> {
         let instruction = self.mem(self.reg(COUNTER)?);
         let operation = instruction & OPERATION;
 
@@ -180,39 +185,33 @@ impl Machine {
                             let address = self.mem(self.reg(COUNTER)?);
 
                             // Push "here" to the stack
-                            let sp = self.reg(SP)?.wrapping_sub(1);
-
-                            self.set_reg(SP, sp)?;
-                            self.set_mem(sp, self.reg(COUNTER)?.wrapping_add(1));
+                            self.stack_push(self.reg(COUNTER)?.wrapping_add(1))?;
 
                             // FIXME: counteract the advanace_counter at the end
                             self.set_reg(COUNTER, address.wrapping_sub(1))?;
                         }
                         OP_RTS => {
                             // Pop the return address
-                            let sp = self.reg(SP)?;
-                            let address = self.mem(sp);
+                            let address = self.stack_pop()?;
 
                             // FIXME: counteract the advanace_counter at the end
                             self.set_reg(COUNTER, address.wrapping_sub(1))?;
-
-                            self.set_reg(SP, sp.wrapping_add(1))?;
                         }
-                        OP_IOI => {}
-                        OP_RTI => {}
                         OP_CRC => {
                             let temp = self.reg(COUNTER)?.wrapping_add(1);
-                            let sp = self.reg(SP)?;
-                            self.set_reg(COUNTER, self.mem(sp).wrapping_sub(1))?;
-                            self.set_mem(sp, temp);
+                            let counter = self.stack_pop()?;
+                            self.set_reg(COUNTER, counter)?;
+                            self.stack_push(temp)?;
                         }
-                        OP_OSIX => {}
                         OP_RAND => {
                             // Yikes now we need the rand crate
                         }
+                        OP_IOI | OP_RTI | OP_OSIX => {
+                            self.handle_interrupt(instruction, interrupt)?
+                        }
                         _ => {
                             return Err(Error::new(
-                                format!("Unknown instruction 0x{:X}", instruction),
+                                format!(" a Unknown instruction 0x{:X}", instruction),
                                 None,
                             ))
                         }
@@ -239,7 +238,7 @@ impl Machine {
                 }
                 _ => {
                     return Err(Error::new(
-                        format!("Unknown instruction 0x{:X}", instruction),
+                        format!(" b Unknown instruction 0x{:X}", instruction),
                         None,
                     ))
                 }
@@ -275,7 +274,7 @@ impl Machine {
             NOP => false,
             _ => {
                 return Err(Error::new(
-                    format!("Unknown instruction 0x{:X}", instruction),
+                    format!(" c Unknown instruction 0x{:X}", instruction),
                     None,
                 ))
             }
@@ -284,6 +283,67 @@ impl Machine {
         if jump {
             // FIXME: -1 to absorb the advanace_counter
             self.set_reg(COUNTER, address.wrapping_sub(1))?;
+        }
+
+        Ok(())
+    }
+
+    fn handle_interrupt(&mut self, instruction: u8, interrupt: Option<u8>) -> Result<(), Error> {
+        match instruction & 0b0000_1111 {
+            OP_IOI => {
+                if self.interrupt_enable() {
+                    let vector = if let Some(vector) = interrupt {
+                        vector
+                    } else {
+                        self.advanace_counter()?;
+                        0
+                    };
+                    self.stack_push(self.reg(COUNTER)?)?;
+                    self.set_reg(
+                        COUNTER,
+                        self.mem(0xF0_u8.wrapping_add(vector.wrapping_mul(2))),
+                    )?;
+
+                    self.stack_push(self.reg(STATUS)?)?;
+                    self.set_reg(STATUS, 0xF1_u8.wrapping_add(vector.wrapping_mul(2)))?;
+
+                    self.set_reg(COUNTER, self.reg(COUNTER)?.wrapping_sub(1))?;
+                }
+            }
+            OP_RTI => {
+                let status = self.stack_pop()?;
+                self.set_reg(STATUS, status)?;
+
+                let counter = self.stack_pop()?;
+                self.set_reg(COUNTER, counter)?;
+
+                self.set_reg(COUNTER, self.reg(COUNTER)?.wrapping_sub(1))?;
+            }
+            OP_OSIX => {
+                if self.interrupt_enable() {
+                    self.advanace_counter()?;
+                    let new_ps = self.mem(self.reg(COUNTER)?) | (self.mem(0xF1) & 0b1000_0000);
+                    self.advanace_counter()?;
+
+                    self.stack_push(self.reg(COUNTER)?)?;
+                    self.set_reg(COUNTER, self.mem(0xF0))?;
+
+                    let enable = self.mem(0xF1) & 0b1000_0000;
+                    self.stack_push(self.reg(STATUS)?)?;
+                    self.set_reg(STATUS, new_ps | enable)?;
+                } else {
+                    self.advanace_counter()?;
+                    self.advanace_counter()?;
+                }
+
+                self.set_reg(COUNTER, self.reg(COUNTER)?.wrapping_sub(1))?;
+            }
+            _ => {
+                return Err(Error::new(
+                    format!(" d Unknown instruction 0x{:X}", instruction),
+                    None,
+                ))
+            }
         }
 
         Ok(())
