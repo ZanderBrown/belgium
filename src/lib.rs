@@ -3,10 +3,10 @@
 #![allow(clippy::non_ascii_literal)]
 
 // mod assemble;
-mod machine;
-mod parse;
 mod alu;
+mod machine;
 mod opcodes;
+mod parse;
 mod stack;
 mod stream;
 mod token;
@@ -20,3 +20,4 @@ pub use crate::machine::Machine;
 pub use crate::machine::{Response, COUNTER, SP, STATUS};
 pub use crate::stream::Error;
 pub use crate::stream::Input;
+pub use crate::token::{Token, Type};

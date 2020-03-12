@@ -81,10 +81,12 @@ pub struct Token {
 }
 
 impl Token {
+    #[must_use]
     pub fn new(data: Type, range: Range) -> Self {
         Self { data, range }
     }
 
+    #[must_use]
     pub fn range(&self) -> Range {
         self.range
     }
@@ -101,22 +103,68 @@ impl Deref for Token {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Type {
     Symbol(String),
-    Label(String),
+    /// rAB
     Register(u8),
-    LiteralNumber(u8),
-    LiteralString(String),
-    Eof
+    /// 123
+    Decimal(u8),
+    /// 0xAB
+    Hexadecimal(u8),
+    /// 0b01010101
+    Binary(u8),
+    /// blah
+    Text(String),
+    /// # blah
+    Comment(String),
+    /// An "entry point"
+    Entry(String),
+    /// ,
+    Comma,
+    /// -
+    Minus,
+    /// +
+    Add,
+    /// _
+    Underscore,
+    /// :
+    Colon,
+    /// >
+    Gt,
+    /// '
+    Apostrophy,
+    /// /
+    Slash,
+    /// ?
+    Question,
+    /// !
+    Exclame,
+    /// .
+    Dot,
+    Eof,
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Symbol(sym) => write!(f, "{}", sym),
-            Self::Label(lbl) => write!(f, "{}:", lbl),
             Self::Register(reg) => write!(f, "r{}", reg),
-            Self::LiteralNumber(num) => write!(f, "{}", num),
-            Self::LiteralString(txt) => write!(f, "\"{}\"", txt),
-            Self::Eof => Ok(())
+            Self::Decimal(num) => write!(f, "{}", num),
+            Self::Hexadecimal(num) => write!(f, "0x{:X}", num),
+            Self::Binary(num) => write!(f, "0b{:b}", num),
+            Self::Text(txt) => write!(f, "\"{}\"", txt),
+            Self::Entry(txt) => write!(f, "_{}", txt),
+            Self::Comment(txt) => write!(f, "#{}", txt),
+            Self::Comma => write!(f, ","),
+            Self::Add => write!(f, "-"),
+            Self::Minus => write!(f, "+"),
+            Self::Underscore => write!(f, "_"),
+            Self::Colon => write!(f, ":"),
+            Self::Gt => write!(f, ">"),
+            Self::Apostrophy => write!(f, "'"),
+            Self::Slash => write!(f, "/"),
+            Self::Question => write!(f, "?"),
+            Self::Exclame => write!(f, "!"),
+            Self::Dot => write!(f, "."),
+            Self::Eof => Ok(()),
         }
     }
 }

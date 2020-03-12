@@ -1,6 +1,6 @@
 [package]
 name = "belgium"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Zander Brown <ab19abm@herts.ac.uk>"]
 edition = "2018"
 description = "CdM-8 Implementation"
@@ -27,4 +27,9 @@ path = "src/lib.rs"
 [[bin]]
 name="belgium-vm"
 path="src/bin/vm.rs"
+required-features = ["getopts"]
+
+[[bin]]
+name="test-parse"
+path="src/bin/test-parse.rs"
 required-features = ["getopts"]
