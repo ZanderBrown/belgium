@@ -1,4 +1,4 @@
-use crate::machine::{Machine, COUNTER, SP, Response};
+use crate::machine::{Machine, Response, COUNTER, SP};
 use crate::op2;
 use crate::opcodes::{ADDSP, ADDSP_SETSP_PUSHALL_POPALL, LDSA, POP, POPALL, PUSH, PUSHALL, SETSP};
 
@@ -66,13 +66,9 @@ impl Machine {
                         self.set_reg(SP, sp)?;
                     }
                 }
-                _ => {
-                    return Err(Response::UnknownInstruction)
-                }
+                _ => return Err(Response::UnknownInstruction),
             },
-            _ => {
-                return Err(Response::UnknownInstruction)
-            }
+            _ => return Err(Response::UnknownInstruction),
         }
 
         Ok(())

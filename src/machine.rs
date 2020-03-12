@@ -22,7 +22,7 @@ pub enum Response {
     Halt,
     Wait,
     UnknownInstruction,
-    BadRegister
+    BadRegister,
 }
 
 #[derive(Clone)]
@@ -210,9 +210,7 @@ impl Machine {
                         OP_IOI | OP_RTI | OP_OSIX => {
                             self.handle_interrupt(instruction, interrupt)?
                         }
-                        _ => {
-                            return Err(Response::UnknownInstruction)
-                        }
+                        _ => return Err(Response::UnknownInstruction),
                     }
                 }
                 OP_STORE => {
@@ -234,9 +232,7 @@ impl Machine {
                     }
                     self.set_reg(target, self.mem(self.reg(address)?))?;
                 }
-                _ => {
-                    return Err(Response::UnknownInstruction)
-                }
+                _ => return Err(Response::UnknownInstruction),
             }
         }
 
@@ -267,9 +263,7 @@ impl Machine {
             BLE => self.z() || (!self.v() && self.n()) || (self.v() && !self.z() && !self.n()),
             BR => true,
             NOP => false,
-            _ => {
-                return Err(Response::UnknownInstruction)
-            }
+            _ => return Err(Response::UnknownInstruction),
         };
 
         if jump {
@@ -330,9 +324,7 @@ impl Machine {
 
                 self.set_reg(COUNTER, self.reg(COUNTER)?.wrapping_sub(1))?;
             }
-            _ => {
-                return Err(Response::UnknownInstruction)
-            }
+            _ => return Err(Response::UnknownInstruction),
         }
 
         Ok(())

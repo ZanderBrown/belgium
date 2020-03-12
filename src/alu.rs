@@ -1,4 +1,4 @@
-use crate::machine::{Machine,STATUS,Response};
+use crate::machine::{Machine, Response, STATUS};
 use crate::op1;
 use crate::op2;
 use crate::opcodes::OPERATION;
@@ -77,9 +77,7 @@ impl ALU for Machine {
                     NEG => (-(val_right as i8) as u8, false),
                     INC => val_right.overflowing_add(1),
                     DEC => val_right.overflowing_sub(1),
-                    _ => {
-                        return Err(Response::UnknownInstruction)
-                    }
+                    _ => return Err(Response::UnknownInstruction),
                 };
 
                 let over = (op == INC && val_right == 127)
@@ -113,17 +111,13 @@ impl ALU for Machine {
                         (result, carry, over)
                     }
                     ROL => (val_right.rotate_left(1), val_right & 0b1000_0000 > 0, false),
-                    _ => {
-                        return Err(Response::UnknownInstruction)
-                    }
+                    _ => return Err(Response::UnknownInstruction),
                 };
 
                 self.handle_status(carry, over, result)?;
                 self.set_reg(reg_right, result)?;
             }
-            _ => {
-                return Err(Response::UnknownInstruction)
-            }
+            _ => return Err(Response::UnknownInstruction),
         }
 
         Ok(())
