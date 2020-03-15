@@ -173,10 +173,10 @@ impl Input {
                 '1' => token!(self, start, Type::Register(1)),
                 '2' => token!(self, start, Type::Register(2)),
                 '3' => token!(self, start, Type::Register(3)),
-                _ => Err(Error::new(
-                    format!("Invalid register r{}", reg),
-                    Range::new(start, self.here()),
-                )),
+                _ => {
+                    let text = self.read(&|c| c.is_alphanumeric());
+                    token!(self, start, Type::Symbol(format!("r{}{}", reg, text)))
+                }
             }
         } else {
             Err(Error::new(
@@ -289,11 +289,18 @@ impl Input {
 
     /// # Errors
     ///
-    pub fn peek(&mut self) -> Result<Option<Token>, Error> {
+    pub fn peek(&mut self) -> Result<Token, Error> {
         if self.current.is_none() {
             self.current = Some(self.read_next()?);
         }
-        Ok(self.current.clone())
+        if let Some(token) = self.current.clone() {
+            Ok(token)
+        } else {
+            Err(Error::new(
+                "Unexpected end of input".to_string(),
+                Range::new(self.here(), self.here()),
+            ))
+        }
     }
 
     /// # Errors

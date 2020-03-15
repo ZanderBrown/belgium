@@ -5,6 +5,7 @@
 // mod assemble;
 mod alu;
 mod machine;
+mod node;
 mod opcodes;
 mod parse;
 mod stack;
@@ -18,6 +19,7 @@ pub use crate::machine::Observer;
 // pub use crate::parse::Parser;
 pub use crate::machine::Machine;
 pub use crate::machine::{Response, COUNTER, SP, STATUS};
+pub use crate::node::{Node, Type as NodeType};
 pub use crate::stream::Error;
 pub use crate::stream::Input;
 pub use crate::token::{Token, Type};
