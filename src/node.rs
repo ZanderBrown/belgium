@@ -78,10 +78,12 @@ pub struct Node {
 }
 
 impl Node {
+    #[must_use]
     pub fn new(data: Type, range: Range) -> Self {
         Self { data, range }
     }
 
+    #[must_use]
     pub fn range(&self) -> Range {
         self.range
     }
